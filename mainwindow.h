@@ -25,6 +25,8 @@ private slots:
     void on_action_week_view_triggered();
     void on_action_month_view_triggered();
     void on_action_about_triggered();
+    void on_calendarWidget_selectionChanged();
+    void updateEventList();
 
 private:
     Ui::MainWindow *ui;
