@@ -3,6 +3,7 @@
 #include <QMenu>
 #include <QStyle>
 #include <QApplication>
+#include <QMessageBox>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -30,4 +31,41 @@ MainWindow::MainWindow(QWidget *parent)
 MainWindow::~MainWindow()
 {
     delete ui;
+}
+
+void MainWindow::on_action_new_triggered()
+{
+    // TODO: 实现新建事件对话框
+    QMessageBox::information(this, tr("新建事件"), tr("即将实现新建事件功能"));
+}
+
+void MainWindow::on_action_exit_triggered()
+{
+    // 隐藏主窗口并保持系统托盘图标
+    hide();
+}
+
+void MainWindow::on_action_day_view_triggered()
+{
+    // TODO: 切换到日视图
+    statusBar()->showMessage(tr("切换到日视图"), 2000);
+}
+
+void MainWindow::on_action_week_view_triggered()
+{
+    // TODO: 切换到周视图
+    statusBar()->showMessage(tr("切换到周视图"), 2000);
+}
+
+void MainWindow::on_action_month_view_triggered()
+{
+    // TODO: 切换到月视图
+    statusBar()->showMessage(tr("切换到月视图"), 2000);
+}
+
+void MainWindow::on_action_about_triggered()
+{
+    QMessageBox::about(this, tr("关于日历日程"),
+                      tr("日历日程 v1.0\n\n"
+                         "一个简单的桌面日历和日程管理工具"));
 }
