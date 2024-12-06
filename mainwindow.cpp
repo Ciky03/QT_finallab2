@@ -6,6 +6,7 @@
 #include <QMessageBox>
 #include <QCalendarWidget>
 #include "eventdialog.h"
+#include "eventitemdelegate.h"
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -185,6 +186,9 @@ MainWindow::MainWindow(QWidget *parent)
 
     trayIcon->setContextMenu(trayMenu);
     trayIcon->show();
+
+    // 设置事件列表的代理
+    ui->eventList->setItemDelegate(new EventItemDelegate(ui->eventList));
 }
 
 MainWindow::~MainWindow()

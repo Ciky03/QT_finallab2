@@ -5,11 +5,13 @@ greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 CONFIG += c++17
 
 SOURCES += \
+    eventitemdelegate.cpp \
     eventdialog.cpp \
     main.cpp \
     mainwindow.cpp
 
 HEADERS += \
+    eventitemdelegate.h \
     eventdialog.h \
     mainwindow.h
 
