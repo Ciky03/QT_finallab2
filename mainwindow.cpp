@@ -195,15 +195,24 @@ MainWindow::~MainWindow()
 void MainWindow::on_action_new_triggered()
 {
     EventDialog dialog(this);
-    dialog.setEventData("", ui->calendarWidget->selectedDate().startOfDay(),
-                       ui->calendarWidget->selectedDate().startOfDay().addSecs(3600));
+    QDateTime startTime = ui->calendarWidget->selectedDate().startOfDay();
+    dialog.setEventData("", startTime,
+                       startTime.addSecs(3600),
+                       "", QColor(Qt::blue));
     if (dialog.exec() == QDialog::Accepted) {
-        // TODO: 保存事件到数据库
-        QString eventText = QString("%1 - %2 %3")
-                              .arg(dialog.getStartTime().toString("HH:mm"))
-                              .arg(dialog.getEndTime().toString("HH:mm"))
-                              .arg(dialog.getEventTitle());
-        ui->eventList->addItem(eventText);
+        EventItem newEvent;
+        newEvent.text = dialog.getEventTitle();
+        newEvent.startTime = dialog.getStartTime();
+        newEvent.endTime = dialog.getEndTime();
+        newEvent.description = dialog.getDescription();
+        newEvent.color = dialog.getEventColor();
+
+        // 添加到事件映射中
+        QDate eventDate = newEvent.startTime.date();
+        eventMap[eventDate].append(newEvent);
+
+        // 更新显示
+        updateEventList();
     }
 }
 
@@ -248,11 +257,21 @@ void MainWindow::on_calendarWidget_selectionChanged()
 void MainWindow::updateEventList()
 {
     ui->eventList->clear();
-    // TODO: 从数据库加载选中日期的事件
-    // 临时添加一些测试项目
-    ui->eventList->addItem(tr("09:00 - 10:00 会议"));
-    ui->eventList->addItem(tr("12:00 - 13:00 午餐"));
-    ui->eventList->addItem(tr("15:00 - 16:00 项目讨论"));
+    QDate selectedDate = ui->calendarWidget->selectedDate();
+    
+    // 如果选中日期有事件，则显示
+    if (eventMap.contains(selectedDate)) {
+        const QList<EventItem>& events = eventMap[selectedDate];
+        for (const EventItem& event : events) {
+            QString eventText = QString("%1 - %2 %3")
+                                  .arg(event.startTime.toString("HH:mm"))
+                                  .arg(event.endTime.toString("HH:mm"))
+                                  .arg(event.text);
+            QListWidgetItem *item = new QListWidgetItem(eventText);
+            item->setBackground(event.color);
+            ui->eventList->addItem(item);
+        }
+    }
 }
 
 void MainWindow::on_action_edit_triggered()
@@ -260,17 +279,28 @@ void MainWindow::on_action_edit_triggered()
     QListWidgetItem *currentItem = ui->eventList->currentItem();
     if (currentItem) {
         EventDialog dialog(this);
-        // TODO: 从数据库加载事件详细信息
-        dialog.setEventData(currentItem->text(),
-                          QDateTime::currentDateTime(),
-                          QDateTime::currentDateTime().addSecs(3600));
+        QDate selectedDate = ui->calendarWidget->selectedDate();
+        int currentRow = ui->eventList->row(currentItem);
+        
+        // 获取当前编辑的事件
+        EventItem& event = eventMap[selectedDate][currentRow];
+        
+        dialog.setEventData(event.text,
+                          event.startTime,
+                          event.endTime,
+                          event.description,
+                          event.color);
+        
         if (dialog.exec() == QDialog::Accepted) {
-            // TODO: 更新数据库中的事件
-            QString eventText = QString("%1 - %2 %3")
-                                  .arg(dialog.getStartTime().toString("HH:mm"))
-                                  .arg(dialog.getEndTime().toString("HH:mm"))
-                                  .arg(dialog.getEventTitle());
-            currentItem->setText(eventText);
+            // 更新事件数据
+            event.text = dialog.getEventTitle();
+            event.startTime = dialog.getStartTime();
+            event.endTime = dialog.getEndTime();
+            event.description = dialog.getDescription();
+            event.color = dialog.getEventColor();
+            
+            // 更新显示
+            updateEventList();
         }
     } else {
         QMessageBox::warning(this, tr("提示"),
@@ -283,14 +313,23 @@ void MainWindow::on_action_delete_triggered()
     QListWidgetItem *currentItem = ui->eventList->currentItem();
     if (currentItem) {
         if (QMessageBox::question(this, tr("确认删除"),
-                                  tr("是否确定删除事件：%1？").arg(currentItem->text()))
+                                tr("是否确定删除事件：%1？").arg(currentItem->text()))
                 == QMessageBox::Yes) {
-            // TODO: 从数据库中删除事件
-            delete ui->eventList->takeItem(ui->eventList->row(currentItem));
+            QDate selectedDate = ui->calendarWidget->selectedDate();
+            int currentRow = ui->eventList->row(currentItem);
+            
+            // 从事件映射中删除
+            eventMap[selectedDate].removeAt(currentRow);
+            if (eventMap[selectedDate].isEmpty()) {
+                eventMap.remove(selectedDate);
+            }
+            
+            // 更新显示
+            updateEventList();
         }
     } else {
         QMessageBox::warning(this, tr("提示"),
-                             tr("请先选择要删除的事件"));
+                           tr("请先选择要删除的事件"));
     }
 }
 

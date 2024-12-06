@@ -3,6 +3,9 @@
 
 #include <QMainWindow>
 #include <QSystemTrayIcon>
+#include <QMap>
+#include <QDate>
+#include <QList>
 
 QT_BEGIN_NAMESPACE
 namespace Ui {
@@ -31,7 +34,16 @@ private slots:
     void on_action_delete_triggered();
 
 private:
+    struct EventItem {
+        QString text;
+        QColor color;
+        QDateTime startTime;
+        QDateTime endTime;
+        QString description;
+    };
+    
     Ui::MainWindow *ui;
     QSystemTrayIcon *trayIcon;
+    QMap<QDate, QList<EventItem>> eventMap;  // 用于存储不同日期的事件
 };
 #endif // MAINWINDOW_H
