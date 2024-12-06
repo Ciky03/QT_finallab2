@@ -4,6 +4,7 @@
 #include <QStyle>
 #include <QApplication>
 #include <QMessageBox>
+#include <QCalendarWidget>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -14,6 +15,137 @@ MainWindow::MainWindow(QWidget *parent)
 
     // 设置窗口标题
     setWindowTitle(tr("日历日程"));
+
+    // 设置界面样式
+    setStyleSheet(R"(
+        QMainWindow {
+            background-color: #f5f5f5;
+        }
+        QMenuBar {
+            background-color: white;
+            color: black;
+        }
+        QMenuBar::item {
+            background-color: transparent;
+            color: black;
+        }
+        QMenuBar::item:selected {
+            background-color: #e6e6e6;
+        }
+        QMenuBar::item:pressed {
+            background-color: #007bff;
+            color: white;
+        }
+        QCalendarWidget {
+            background-color: white;
+            color: black;
+        }
+        QCalendarWidget QTableView {
+            background-color: white;
+            selection-background-color: #007bff;
+            selection-color: white;
+        }
+        QCalendarWidget QTableView QTableCornerButton::section {
+            background-color: white;
+        }
+        QCalendarWidget QWidget {
+            alternate-background-color: #f9f9f9;
+            color: black;
+        }
+        QCalendarWidget QAbstractItemView:enabled {
+            color: black;
+            background-color: white;
+            selection-background-color: #007bff;
+            selection-color: white;
+        }
+        QCalendarWidget QAbstractItemView:disabled {
+            color: #808080;
+        }
+        QCalendarWidget QAbstractItemView::item:hover {
+            background-color: #e6e6e6;
+        }
+        QCalendarWidget QToolButton {
+            color: black;
+            background-color: transparent;
+            border: none;
+            border-radius: 4px;
+            padding: 4px;
+        }
+        QCalendarWidget QToolButton:hover {
+            background-color: #e6e6e6;
+        }
+        QCalendarWidget QMenu {
+            background-color: white;
+            border: 1px solid #ddd;
+            color: black;
+        }
+        QListWidget {
+            background-color: white;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 4px;
+            color: black;
+        }
+        QListWidget::item {
+            color: black;
+            padding: 4px;
+            border-radius: 2px;
+        }
+        QListWidget::item:hover {
+            background-color: #f0f0f0;
+        }
+        QListWidget::item:selected {
+            background-color: #007bff;
+            color: white;
+        }
+        QLabel {
+            color: #333;
+        }
+        QToolBar {
+            background-color: white;
+            border-bottom: 1px solid #ddd;
+            spacing: 2px;
+        }
+        QToolBar QToolButton {
+            color: black;
+            border: none;
+            border-radius: 4px;
+            padding: 4px;
+        }
+        QToolBar QToolButton:hover {
+            background-color: #f0f0f0;
+        }
+        QToolBar QToolButton::menu-indicator,
+        QToolBar QToolButton::menu-button {
+            color: black;
+        }
+        QToolBar QToolButton[popupMode="1"] {
+            padding-right: 20px;
+            color: black;
+        }
+        QToolBar * {
+            color: black;
+        }
+        QMenu {
+            background-color: white;
+            color: black;
+        }
+        QMenu::item:selected {
+            background-color: #007bff;
+            color: white;
+        }
+        QStatusBar {
+            background-color: white;
+            border-top: 1px solid #ddd;
+            color: black;
+        }
+    )");
+
+    // 设置日历部件的样式
+    ui->calendarWidget->setVerticalHeaderFormat(QCalendarWidget::NoVerticalHeader);
+    ui->calendarWidget->setHorizontalHeaderFormat(QCalendarWidget::SingleLetterDayNames);
+    ui->calendarWidget->setNavigationBarVisible(true);
+    ui->calendarWidget->setGridVisible(true);
 
     // 初始化工具栏
     ui->mainToolBar->setIconSize(QSize(24, 24));
@@ -80,7 +212,7 @@ void MainWindow::on_action_day_view_triggered()
 void MainWindow::on_action_week_view_triggered()
 {
     // TODO: 切换到周视图
-    statusBar()->showMessage(tr("切换到周视图"), 2000);
+    statusBar()->showMessage(tr("��换到周视图"), 2000);
 }
 
 void MainWindow::on_action_month_view_triggered()
