@@ -15,6 +15,23 @@ MainWindow::MainWindow(QWidget *parent)
     // 设置窗口标题
     setWindowTitle(tr("日历日程"));
     
+    // 初始化工具栏
+    ui->mainToolBar->setIconSize(QSize(24, 24));
+    
+    // 如果系统主题没有提供图标，则使用自定义图标
+    if (ui->action_new->icon().isNull()) {
+        ui->action_new->setIcon(style()->standardIcon(QStyle::SP_FileIcon));
+    }
+    if (ui->action_day_view->icon().isNull()) {
+        ui->action_day_view->setIcon(style()->standardIcon(QStyle::SP_FileDialogListView));
+    }
+    if (ui->action_week_view->icon().isNull()) {
+        ui->action_week_view->setIcon(style()->standardIcon(QStyle::SP_FileDialogDetailedView));
+    }
+    if (ui->action_month_view->icon().isNull()) {
+        ui->action_month_view->setIcon(style()->standardIcon(QStyle::SP_FileDialogInfoView));
+    }
+    
     // 初始化系统托盘
     trayIcon->setIcon(style()->standardIcon(QStyle::SP_ComputerIcon));
     trayIcon->setToolTip(tr("日历日程"));
@@ -41,7 +58,7 @@ void MainWindow::on_action_new_triggered()
 
 void MainWindow::on_action_exit_triggered()
 {
-    // 隐藏主窗口并保持系统托盘图��
+    // 隐藏主窗口并保持系统托盘图
     hide();
 }
 
