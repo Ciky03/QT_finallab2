@@ -5,13 +5,16 @@ greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 CONFIG += c++17
 
 SOURCES += \
+    eventdialog.cpp \
     main.cpp \
     mainwindow.cpp
 
 HEADERS += \
+    eventdialog.h \
     mainwindow.h
 
 FORMS += \
+    eventdialog.ui \
     mainwindow.ui
 
 # Default rules for deployment.

@@ -5,6 +5,7 @@
 #include <QApplication>
 #include <QMessageBox>
 #include <QCalendarWidget>
+#include "eventdialog.h"
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -193,8 +194,17 @@ MainWindow::~MainWindow()
 
 void MainWindow::on_action_new_triggered()
 {
-    // TODO: 实现新建事件对话框
-    QMessageBox::information(this, tr("新建事件"), tr("即将实现新建事件功能"));
+    EventDialog dialog(this);
+    dialog.setEventData("", ui->calendarWidget->selectedDate().startOfDay(),
+                       ui->calendarWidget->selectedDate().startOfDay().addSecs(3600));
+    if (dialog.exec() == QDialog::Accepted) {
+        // TODO: 保存事件到数据库
+        QString eventText = QString("%1 - %2 %3")
+                              .arg(dialog.getStartTime().toString("HH:mm"))
+                              .arg(dialog.getEndTime().toString("HH:mm"))
+                              .arg(dialog.getEventTitle());
+        ui->eventList->addItem(eventText);
+    }
 }
 
 void MainWindow::on_action_exit_triggered()
@@ -212,7 +222,7 @@ void MainWindow::on_action_day_view_triggered()
 void MainWindow::on_action_week_view_triggered()
 {
     // TODO: 切换到周视图
-    statusBar()->showMessage(tr("��换到周视图"), 2000);
+    statusBar()->showMessage(tr("切换到周视图"), 2000);
 }
 
 void MainWindow::on_action_month_view_triggered()
@@ -249,12 +259,22 @@ void MainWindow::on_action_edit_triggered()
 {
     QListWidgetItem *currentItem = ui->eventList->currentItem();
     if (currentItem) {
-        // TODO: 实现编辑事件对话框
-        QMessageBox::information(this, tr("编辑事件"),
-                                 tr("即将编辑事件：%1").arg(currentItem->text()));
+        EventDialog dialog(this);
+        // TODO: 从数据库加载事件详细信息
+        dialog.setEventData(currentItem->text(),
+                          QDateTime::currentDateTime(),
+                          QDateTime::currentDateTime().addSecs(3600));
+        if (dialog.exec() == QDialog::Accepted) {
+            // TODO: 更新数据库中的事件
+            QString eventText = QString("%1 - %2 %3")
+                                  .arg(dialog.getStartTime().toString("HH:mm"))
+                                  .arg(dialog.getEndTime().toString("HH:mm"))
+                                  .arg(dialog.getEventTitle());
+            currentItem->setText(eventText);
+        }
     } else {
         QMessageBox::warning(this, tr("提示"),
-                             tr("请先选择要编辑的事件"));
+                           tr("请先选择要编辑的事件"));
     }
 }
 
