@@ -11,13 +11,13 @@ MainWindow::MainWindow(QWidget *parent)
     , trayIcon(new QSystemTrayIcon(this))
 {
     ui->setupUi(this);
-    
+
     // 设置窗口标题
     setWindowTitle(tr("日历日程"));
-    
+
     // 初始化工具栏
     ui->mainToolBar->setIconSize(QSize(24, 24));
-    
+
     // 如果系统主题没有提供图标，则使用自定义图标
     if (ui->action_new->icon().isNull()) {
         ui->action_new->setIcon(style()->standardIcon(QStyle::SP_FileIcon));
@@ -31,16 +31,25 @@ MainWindow::MainWindow(QWidget *parent)
     if (ui->action_month_view->icon().isNull()) {
         ui->action_month_view->setIcon(style()->standardIcon(QStyle::SP_FileDialogInfoView));
     }
-    
+
+    // 设置默认图标
+    if (ui->action_edit->icon().isNull()) {
+        ui->action_edit->setIcon(style()->standardIcon(QStyle::SP_FileDialogContentsView));
+    }
+    if (ui->action_delete->icon().isNull()) {
+        ui->action_delete->setIcon(style()->standardIcon(QStyle::SP_TrashIcon));
+    }
+
+
     // 初始化系统托盘
     trayIcon->setIcon(style()->standardIcon(QStyle::SP_ComputerIcon));
     trayIcon->setToolTip(tr("日历日程"));
-    
+
     // 创建托盘菜单
     QMenu *trayMenu = new QMenu(this);
     trayMenu->addAction(tr("显示主窗口"), this, &QWidget::show);
     trayMenu->addAction(tr("退出"), qApp, &QApplication::quit);
-    
+
     trayIcon->setContextMenu(trayMenu);
     trayIcon->show();
 }
@@ -83,8 +92,8 @@ void MainWindow::on_action_month_view_triggered()
 void MainWindow::on_action_about_triggered()
 {
     QMessageBox::about(this, tr("关于日历日程"),
-                      tr("日历日程 v1.0\n\n"
-                         "一个简单的桌面日历和日程管理工具"));
+                       tr("日历日程 v1.0\n\n"
+                          "一个简单的桌面日历和日程管理工具"));
 }
 
 void MainWindow::on_calendarWidget_selectionChanged()
@@ -103,3 +112,33 @@ void MainWindow::updateEventList()
     ui->eventList->addItem(tr("12:00 - 13:00 午餐"));
     ui->eventList->addItem(tr("15:00 - 16:00 项目讨论"));
 }
+
+void MainWindow::on_action_edit_triggered()
+{
+    QListWidgetItem *currentItem = ui->eventList->currentItem();
+    if (currentItem) {
+        // TODO: 实现编辑事件对话框
+        QMessageBox::information(this, tr("编辑事件"),
+                                 tr("即将编辑事件：%1").arg(currentItem->text()));
+    } else {
+        QMessageBox::warning(this, tr("提示"),
+                             tr("请先选择要编辑的事件"));
+    }
+}
+
+void MainWindow::on_action_delete_triggered()
+{
+    QListWidgetItem *currentItem = ui->eventList->currentItem();
+    if (currentItem) {
+        if (QMessageBox::question(this, tr("确认删除"),
+                                  tr("是否确定删除事件：%1？").arg(currentItem->text()))
+                == QMessageBox::Yes) {
+            // TODO: 从数据库中删除事件
+            delete ui->eventList->takeItem(ui->eventList->row(currentItem));
+        }
+    } else {
+        QMessageBox::warning(this, tr("提示"),
+                             tr("请先选择要删除的事件"));
+    }
+}
+

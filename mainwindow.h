@@ -27,6 +27,8 @@ private slots:
     void on_action_about_triggered();
     void on_calendarWidget_selectionChanged();
     void updateEventList();
+    void on_action_edit_triggered();
+    void on_action_delete_triggered();
 
 private:
     Ui::MainWindow *ui;

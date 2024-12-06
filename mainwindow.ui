@@ -110,21 +110,24 @@
     <bool>false</bool>
    </attribute>
    <addaction name="action_new"/>
+   <addaction name="action_edit"/>
+   <addaction name="action_delete"/>
    <addaction name="separator"/>
    <addaction name="action_day_view"/>
    <addaction name="action_week_view"/>
    <addaction name="action_month_view"/>
+   <addaction name="separator"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
   <action name="action_new">
+   <property name="icon">
+    <iconset theme="document-new"/>
+   </property>
    <property name="text">
     <string>新建事件(&amp;N)</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+N</string>
-   </property>
-   <property name="icon">
-    <iconset theme="document-new"/>
    </property>
   </action>
   <action name="action_exit">
@@ -136,32 +139,54 @@
    </property>
   </action>
   <action name="action_day_view">
-   <property name="text">
-    <string>日视图(&amp;D)</string>
-   </property>
    <property name="icon">
     <iconset theme="view-calendar-day"/>
    </property>
+   <property name="text">
+    <string>日视图(&amp;D)</string>
+   </property>
   </action>
   <action name="action_week_view">
-   <property name="text">
-    <string>周视图(&amp;W)</string>
-   </property>
    <property name="icon">
     <iconset theme="view-calendar-week"/>
    </property>
+   <property name="text">
+    <string>周视图(&amp;W)</string>
+   </property>
   </action>
   <action name="action_month_view">
-   <property name="text">
-    <string>月视图(&amp;M)</string>
-   </property>
    <property name="icon">
     <iconset theme="view-calendar-month"/>
+   </property>
+   <property name="text">
+    <string>月视图(&amp;M)</string>
    </property>
   </action>
   <action name="action_about">
    <property name="text">
     <string>关于(&amp;A)</string>
+   </property>
+  </action>
+  <action name="action_edit">
+   <property name="icon">
+    <iconset theme="document-edit"/>
+   </property>
+   <property name="text">
+    <string>编辑事件(&amp;E)</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+E</string>
+   </property>
+  </action>
+  <action name="action_delete">
+   <property name="icon">
+    <iconset theme="edit-delete"/>
+   </property>
+   <property name="text">
+    <string>删除事件(&amp;D)</string>
+   </property>
+   <property name="shortcut">
+    <string>Del</string>
    </property>
   </action>
  </widget>
