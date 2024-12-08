@@ -17,6 +17,8 @@
 #include <QDropEvent>
 #include <QMimeData>
 #include <QCursor>
+#include <QTimer>
+#include <QDebug>
 
 QT_BEGIN_NAMESPACE
 namespace Ui {
@@ -66,11 +68,16 @@ private:
     QWidget *weekView = nullptr;
     QDate currentWeekStart;
     QListWidget *eventListWidget;
+    QWidget *dayView = nullptr;  // 添加日视图指针
+    QDate currentDate;           // 添加当前日期
 
     void setupWeekView();
     void updateWeekView();
     void updateWeekEvents(const QDate& date);
     void showPreviousWeek();
     void showNextWeek();
+    void setupDayView();         // 设置日视图
+    void updateDayView();        // 更新日视图
+    void updateDayEvents();      // 更新日视图事件
 };
 #endif // MAINWINDOW_H
