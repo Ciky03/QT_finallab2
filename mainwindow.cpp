@@ -189,6 +189,17 @@ MainWindow::MainWindow(QWidget *parent)
 
     // 设置事件列表的代理
     ui->eventList->setItemDelegate(new EventItemDelegate(ui->eventList));
+
+    // 设置拖放
+    setAcceptDrops(true);
+    ui->eventList->setDragDropMode(QAbstractItemView::DragOnly);
+    ui->calendarWidget->setAcceptDrops(true);
+
+    // 安装事件过滤器
+    installEventFilter(this);
+
+    // 为日历控件安装事件过滤器
+    ui->calendarWidget->installEventFilter(this);
 }
 
 MainWindow::~MainWindow()
@@ -338,16 +349,23 @@ void MainWindow::updateEventList()
     // 如果选中日期有事件，则显示
     if (eventMap.contains(selectedDate)) {
         const QList<EventItem> &events = eventMap[selectedDate];
-        for (const EventItem& event : events) {
+        for (int i = 0; i < events.size(); ++i) {
+            const EventItem& event = events[i];
             QString eventText = QString("%1 - %2 %3")
                                 .arg(event.startTime.toString("HH:mm"))
                                 .arg(event.endTime.toString("HH:mm"))
                                 .arg(event.text);
             QListWidgetItem *item = new QListWidgetItem(eventText);
             item->setBackground(event.color);
+            item->setData(Qt::UserRole, i);  // 存储事件索引
             ui->eventList->addItem(item);
         }
     }
+
+    // 启用拖放
+    ui->eventList->setDragEnabled(true);
+    ui->eventList->setDragDropMode(QAbstractItemView::DragOnly);
+    ui->calendarWidget->setAcceptDrops(true);
 }
 
 void MainWindow::on_action_edit_triggered()
@@ -575,7 +593,7 @@ void MainWindow::setupWeekView()
 
     // 期显示
     QHBoxLayout* daysLayout = new QHBoxLayout();
-    daysLayout->setSpacing(0);  // 减少水平间距
+    daysLayout->setSpacing(0);  // 少水平间距
     QButtonGroup* buttonGroup = new QButtonGroup(this);  // 添加按钮组
     for (int i = 0; i < 7; ++i) {
         QPushButton* dayBtn = new QPushButton(weekView);
@@ -659,7 +677,7 @@ void MainWindow::setupWeekView()
         }
     )");
 
-    // 不再使用setCentralWidget，而是隐藏原中央部件并显示weekView
+    // 不再使用setCentralWidget，而是隐藏原央部件并显示weekView
     weekView->setParent(centralWidget());
     weekView->setGeometry(centralWidget()->rect());
 
@@ -674,7 +692,7 @@ void MainWindow::updateWeekView()
 {
     if (!weekView) return;
     
-    // 更新年月标签
+    // 更新��月标签
     QLabel* yearMonthLabel = weekView->findChild<QLabel*>("yearMonthLabel");
     if (yearMonthLabel) {
         yearMonthLabel->setText(QString("%1年%2月").arg(currentWeekStart.year())
@@ -698,7 +716,7 @@ void MainWindow::updateWeekView()
         // 设置日期文本
         btn->setText(QString::number(date.day()));
         
-        // 如果该日期有事件，添加事件指示器
+        // 果该日期有事件，加事件指示器
         if (eventMap.contains(date)) {
             QWidget* dotsContainer = new QWidget(btn);
             QHBoxLayout* dotsLayout = new QHBoxLayout(dotsContainer);
@@ -790,8 +808,8 @@ void MainWindow::updateWeekEvents(const QDate& date)
             // 创建列表项并设置widget
             QListWidgetItem* eventItem = new QListWidgetItem;
             eventItem->setData(Qt::UserRole, eventIndex);  // 存储事件索引
-            eventWidget->adjustSize();  // 调整容器大小
-            eventItem->setSizeHint(eventWidget->sizeHint());  // 使用容器的建议大小
+            eventWidget->adjustSize();  // 整容器大小
+            eventItem->setSizeHint(eventWidget->sizeHint());  // 使器的建议大小
             eventListWidget->addItem(eventItem);
             eventListWidget->setItemWidget(eventItem, eventWidget);
 
@@ -801,7 +819,7 @@ void MainWindow::updateWeekEvents(const QDate& date)
         // 连接选择改变信号
         connect(eventListWidget, &QListWidget::itemClicked, this, [this](QListWidgetItem * item) {
             int eventIndex = item->data(Qt::UserRole).toInt();
-            // 选中整个事件（所有相关项）
+            // 选中整��事件（所有相关项）
             for (int i = 0; i < eventListWidget->count(); ++i) {
                 QListWidgetItem* currentItem = eventListWidget->item(i);
                 if (currentItem->data(Qt::UserRole).toInt() == eventIndex) {
@@ -833,5 +851,147 @@ void MainWindow::showNextWeek()
 {
     currentWeekStart = currentWeekStart.addDays(7);
     updateWeekView();
+}
+
+void MainWindow::dragEnterEvent(QDragEnterEvent* event)
+{
+    if (event->mimeData()->hasText()) {
+        event->acceptProposedAction();
+    }
+}
+
+void MainWindow::dragMoveEvent(QDragMoveEvent* event)
+{
+    event->acceptProposedAction();
+}
+
+void MainWindow::dropEvent(QDropEvent* event)
+{
+    // 获取拖放的目标日期
+    QCalendarWidget* calendar = ui->calendarWidget;
+    QPoint pos = calendar->mapFromGlobal(QCursor::pos());
+    
+    // 计算鼠标位置对应的日期
+    QDate dropDate = calendar->selectedDate();  // 默认使用选中日期
+    
+    // 尝试根据位置计算日期
+    if (calendar->rect().contains(pos)) {
+        int row = pos.y() / (calendar->height() / 6);  // 6行
+        int col = pos.x() / (calendar->width() / 7);   // 7列
+        
+        QDate firstDay = QDate(calendar->selectedDate().year(), 
+                             calendar->selectedDate().month(), 1);
+        int offset = firstDay.dayOfWeek() - 1;  // 计算月初是星期几
+        
+        int day = row * 7 + col - offset + 1;
+        QDate calculatedDate = firstDay.addDays(day - 1);
+        
+        // 确保日期在当前月份内
+        if (calculatedDate.month() == calendar->selectedDate().month()) {
+            dropDate = calculatedDate;
+        }
+    }
+
+    // 获取原始事件的信息
+    QDate originalDate = calendar->selectedDate();
+    int eventIndex = ui->eventList->currentItem()->data(Qt::UserRole).toInt();
+
+    // 如果日期不同，则移动事件
+    if (dropDate != originalDate) {
+        handleEventDrop(dropDate, eventIndex);
+    }
+
+    event->acceptProposedAction();
+}
+
+void MainWindow::handleEventDrop(const QDate& newDate, int eventIndex)
+{
+    QDate oldDate = ui->calendarWidget->selectedDate();
+    
+    // 确保索引有效
+    if (!eventMap.contains(oldDate) || eventIndex >= eventMap[oldDate].size()) {
+        return;
+    }
+
+    // 获取事件
+    EventItem event = eventMap[oldDate][eventIndex];
+
+    // 调整事件的日期
+    QTime startTime = event.startTime.time();
+    QTime endTime = event.endTime.time();
+    event.startTime = QDateTime(newDate, startTime);
+    event.endTime = QDateTime(newDate, endTime);
+
+    // 从旧日期移除事件
+    eventMap[oldDate].removeAt(eventIndex);
+    if (eventMap[oldDate].isEmpty()) {
+        eventMap.remove(oldDate);
+    }
+
+    // 添加到新日期
+    eventMap[newDate].append(event);
+
+    // 更新显示
+    ui->calendarWidget->setSelectedDate(newDate);  // 选中新日期
+    updateEventList();
+}
+
+bool MainWindow::eventFilter(QObject *obj, QEvent *event)
+{
+    if (obj == ui->calendarWidget) {
+        if (event->type() == QEvent::DragEnter) {
+            QDragEnterEvent *dragEvent = static_cast<QDragEnterEvent*>(event);
+            dragEvent->acceptProposedAction();
+            return true;
+        }
+        else if (event->type() == QEvent::DragMove) {
+            QDragMoveEvent *moveEvent = static_cast<QDragMoveEvent*>(event);
+            moveEvent->acceptProposedAction();
+            return true;
+        }
+        else if (event->type() == QEvent::Drop) {
+            QDropEvent *dropEvent = static_cast<QDropEvent*>(event);
+            QPoint pos = dropEvent->pos();
+            
+            // 计算鼠标位置对应的日期
+            QCalendarWidget* calendar = ui->calendarWidget;
+            
+            // 获取日历视图的大小信息
+            int totalHeight = calendar->height();
+            int totalWidth = calendar->width();
+            int headerHeight = totalHeight / 8;  // 估计标题栏高度
+            int cellHeight = (totalHeight - headerHeight) / 6;
+            int cellWidth = totalWidth / 7;
+            
+            // 计算行列位置
+            int row = (pos.y() - headerHeight) / cellHeight;
+            int col = pos.x() / cellWidth;
+            
+            // 确保行列在有效范围内
+            if (row >= 0 && row < 6 && col >= 0 && col < 7) {
+                // 获取当前显示的月份的第一天
+                QDate firstOfMonth(calendar->yearShown(), calendar->monthShown(), 1);
+                
+                // 计算日历第一个格子对应的日期（可能是上个月的日期）
+                QDate firstDate = firstOfMonth.addDays(-(firstOfMonth.dayOfWeek() - 1));
+                
+                // 计算目标日期
+                QDate targetDate = firstDate.addDays(row * 7 + col);
+                
+                // 获取原始事件的信息
+                QDate originalDate = calendar->selectedDate();
+                int eventIndex = ui->eventList->currentItem()->data(Qt::UserRole).toInt();
+                
+                // 如果日期不同，则移动事件
+                if (targetDate != originalDate) {
+                    handleEventDrop(targetDate, eventIndex);
+                }
+            }
+            
+            dropEvent->acceptProposedAction();
+            return true;
+        }
+    }
+    return QMainWindow::eventFilter(obj, event);
 }
 

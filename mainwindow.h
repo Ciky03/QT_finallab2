@@ -12,6 +12,11 @@
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QButtonGroup>
+#include <QDragEnterEvent>
+#include <QDragMoveEvent>
+#include <QDropEvent>
+#include <QMimeData>
+#include <QCursor>
 
 QT_BEGIN_NAMESPACE
 namespace Ui {
@@ -38,6 +43,13 @@ private slots:
     void updateEventList();
     void on_action_edit_triggered();
     void on_action_delete_triggered();
+    void handleEventDrop(const QDate& newDate, int eventIndex);
+
+protected:
+    void dragEnterEvent(QDragEnterEvent* event) override;
+    void dragMoveEvent(QDragMoveEvent* event) override;
+    void dropEvent(QDropEvent* event) override;
+    bool eventFilter(QObject *obj, QEvent *event) override;
 
 private:
     struct EventItem {
