@@ -117,11 +117,13 @@
    <addaction name="action_week_view"/>
    <addaction name="action_month_view"/>
    <addaction name="separator"/>
+   <addaction name="action_exit"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
   <action name="action_new">
    <property name="icon">
-    <iconset theme="document-new"/>
+    <iconset resource="resources.qrc">
+     <normaloff>:/img/img/new.png</normaloff>:/img/img/new.png</iconset>
    </property>
    <property name="text">
     <string>新建事件(&amp;N)</string>
@@ -131,6 +133,10 @@
    </property>
   </action>
   <action name="action_exit">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/img/img/exit.png</normaloff>:/img/img/exit.png</iconset>
+   </property>
    <property name="text">
     <string>退出(&amp;Q)</string>
    </property>
@@ -140,7 +146,8 @@
   </action>
   <action name="action_day_view">
    <property name="icon">
-    <iconset theme="view-calendar-day"/>
+    <iconset theme="view-calendar-day" resource="resources.qrc">
+     <normaloff>:/img/img/day.png</normaloff>:/img/img/day.png</iconset>
    </property>
    <property name="text">
     <string>日视图(&amp;D)</string>
@@ -148,7 +155,8 @@
   </action>
   <action name="action_week_view">
    <property name="icon">
-    <iconset theme="view-calendar-week"/>
+    <iconset theme="view-calendar-week" resource="resources.qrc">
+     <normaloff>:/img/img/week.png</normaloff>:/img/img/week.png</iconset>
    </property>
    <property name="text">
     <string>周视图(&amp;W)</string>
@@ -156,20 +164,26 @@
   </action>
   <action name="action_month_view">
    <property name="icon">
-    <iconset theme="view-calendar-month"/>
+    <iconset theme="view-calendar-month" resource="resources.qrc">
+     <normaloff>:/img/img/month.png</normaloff>:/img/img/month.png</iconset>
    </property>
    <property name="text">
     <string>月视图(&amp;M)</string>
    </property>
   </action>
   <action name="action_about">
+   <property name="icon">
+    <iconset resource="resources.qrc">
+     <normaloff>:/img/img/about.png</normaloff>:/img/img/about.png</iconset>
+   </property>
    <property name="text">
     <string>关于(&amp;A)</string>
    </property>
   </action>
   <action name="action_edit">
    <property name="icon">
-    <iconset theme="document-edit"/>
+    <iconset theme="document-edit" resource="resources.qrc">
+     <normaloff>:/img/img/edit.png</normaloff>:/img/img/edit.png</iconset>
    </property>
    <property name="text">
     <string>编辑事件(&amp;E)</string>
@@ -180,7 +194,8 @@
   </action>
   <action name="action_delete">
    <property name="icon">
-    <iconset theme="edit-delete"/>
+    <iconset resource="resources.qrc">
+     <normaloff>:/img/img/delete.png</normaloff>:/img/img/delete.png</iconset>
    </property>
    <property name="text">
     <string>删除事件(&amp;D)</string>
@@ -190,6 +205,8 @@
    </property>
   </action>
  </widget>
- <resources/>
+ <resources>
+  <include location="resources.qrc"/>
+ </resources>
  <connections/>
 </ui>

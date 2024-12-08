@@ -5,6 +5,7 @@
 #include <QApplication>
 #include <QMessageBox>
 #include <QCalendarWidget>
+#include <QToolButton>
 #include "eventdialog.h"
 #include "eventitemdelegate.h"
 
@@ -149,6 +150,19 @@ MainWindow::MainWindow(QWidget *parent)
     ui->calendarWidget->setNavigationBarVisible(true);
     ui->calendarWidget->setGridVisible(true);
 
+    // 设置日历导航按钮的样式
+    QToolButton* prevMonth = ui->calendarWidget->findChild<QToolButton *>("qt_calendar_prevmonth");
+    QToolButton* nextMonth = ui->calendarWidget->findChild<QToolButton *>("qt_calendar_nextmonth");
+
+    if (prevMonth) {
+        prevMonth->setIcon(QIcon(":/img/img/last.png"));
+        prevMonth->setIconSize(QSize(16, 16));
+    }
+    if (nextMonth) {
+        nextMonth->setIcon(QIcon(":/img/img/next.png"));
+        nextMonth->setIconSize(QSize(16, 16));
+    }
+
     // 初始化工具栏
     ui->mainToolBar->setIconSize(QSize(24, 24));
 
@@ -201,10 +215,10 @@ void MainWindow::on_action_new_triggered()
     QDate selectedDate;
     if (weekView && weekView->isVisible()) {
         // 在周视图中，获取当前选中的日期
-        QList<QPushButton*> buttons = weekView->findChildren<QPushButton*>();
+        QList<QPushButton *> buttons = weekView->findChildren<QPushButton *>();
         for (int i = 1; i <= 7; ++i) {
             if (buttons[i]->isChecked()) {
-                selectedDate = currentWeekStart.addDays(i-1);
+                selectedDate = currentWeekStart.addDays(i - 1);
                 break;
             }
         }
@@ -216,8 +230,8 @@ void MainWindow::on_action_new_triggered()
     EventDialog dialog(this);
     QDateTime startTime = selectedDate.startOfDay();
     dialog.setEventData("", startTime,
-                       startTime.addSecs(3600),
-                       "", QColor(Qt::blue));
+                        startTime.addSecs(3600),
+                        "", QColor(Qt::blue));
     if (dialog.exec() == QDialog::Accepted) {
         EventItem newEvent;
         newEvent.text = dialog.getEventTitle();
@@ -274,15 +288,15 @@ void MainWindow::on_action_month_view_triggered()
         // 更新月视图的事件显示
         updateEventList();
     }
-    
+
     statusBar()->showMessage(tr("切换到月视图"), 2000);
 }
 
 void MainWindow::on_action_about_triggered()
 {
-    QMessageBox::about(this, tr("关于日历日程"),
-                       tr("日历日程 v1.0\n\n"
-                          "一个简单的桌面日历和日程管理工具"));
+    QMessageBox::about(this, tr("关于日历日程控件"),
+                       tr("2022441010234-张创阳-桌面日历日程控件"
+                         ));
 }
 
 void MainWindow::on_calendarWidget_selectionChanged()
@@ -296,15 +310,15 @@ void MainWindow::updateEventList()
 {
     ui->eventList->clear();
     QDate selectedDate = ui->calendarWidget->selectedDate();
-    
+
     // 如果选中日期有事件，则显示
     if (eventMap.contains(selectedDate)) {
-        const QList<EventItem>& events = eventMap[selectedDate];
+        const QList<EventItem> &events = eventMap[selectedDate];
         for (const EventItem& event : events) {
             QString eventText = QString("%1 - %2 %3")
-                                  .arg(event.startTime.toString("HH:mm"))
-                                  .arg(event.endTime.toString("HH:mm"))
-                                  .arg(event.text);
+                                .arg(event.startTime.toString("HH:mm"))
+                                .arg(event.endTime.toString("HH:mm"))
+                                .arg(event.text);
             QListWidgetItem *item = new QListWidgetItem(eventText);
             item->setBackground(event.color);
             ui->eventList->addItem(item);
@@ -320,10 +334,10 @@ void MainWindow::on_action_edit_triggered()
         if (currentItem) {
             // 获取当前选中的日期
             QDate selectedDate;
-            QList<QPushButton*> buttons = weekView->findChildren<QPushButton*>();
+            QList<QPushButton *> buttons = weekView->findChildren<QPushButton *>();
             for (int i = 1; i <= 7; ++i) {
                 if (buttons[i]->isChecked()) {
-                    selectedDate = currentWeekStart.addDays(i-1);
+                    selectedDate = currentWeekStart.addDays(i - 1);
                     break;
                 }
             }
@@ -333,10 +347,10 @@ void MainWindow::on_action_edit_triggered()
 
             EventDialog dialog(this);
             dialog.setEventData(event.text,
-                              event.startTime,
-                              event.endTime,
-                              event.description,
-                              event.color);
+                                event.startTime,
+                                event.endTime,
+                                event.description,
+                                event.color);
 
             if (dialog.exec() == QDialog::Accepted) {
                 // 更新事件数据
@@ -351,7 +365,7 @@ void MainWindow::on_action_edit_triggered()
             }
         } else {
             QMessageBox::warning(this, tr("提示"),
-                               tr("请先选择要编辑的事件"));
+                                 tr("请先选择要编辑的事件"));
         }
     } else {
         // 原有的月视图编辑代码
@@ -360,7 +374,7 @@ void MainWindow::on_action_edit_triggered()
             // ... 原有的编辑代码 ...
         } else {
             QMessageBox::warning(this, tr("提示"),
-                               tr("请先选择要编辑的事件"));
+                                 tr("请先选择要编辑的事件"));
         }
     }
 }
@@ -373,10 +387,10 @@ void MainWindow::on_action_delete_triggered()
         if (currentItem) {
             // 获取当前选中的日期
             QDate selectedDate;
-            QList<QPushButton*> buttons = weekView->findChildren<QPushButton*>();
+            QList<QPushButton *> buttons = weekView->findChildren<QPushButton *>();
             for (int i = 1; i <= 7; ++i) {
                 if (buttons[i]->isChecked()) {
-                    selectedDate = currentWeekStart.addDays(i-1);
+                    selectedDate = currentWeekStart.addDays(i - 1);
                     break;
                 }
             }
@@ -385,7 +399,7 @@ void MainWindow::on_action_delete_triggered()
             QString eventText = eventMap[selectedDate][eventIndex].text;
 
             if (QMessageBox::question(this, tr("确认删除"),
-                                    tr("是否确定删除事件：%1？").arg(eventText))
+                                      tr("是否确定删除事件：%1？").arg(eventText))
                     == QMessageBox::Yes) {
                 // 从事件映射中删除
                 eventMap[selectedDate].removeAt(eventIndex);
@@ -398,7 +412,7 @@ void MainWindow::on_action_delete_triggered()
             }
         } else {
             QMessageBox::warning(this, tr("提示"),
-                               tr("请先选择要删除的事件"));
+                                 tr("请先选择要删除的事件"));
         }
     } else {
         // 原有的月视图删除代码
@@ -407,7 +421,7 @@ void MainWindow::on_action_delete_triggered()
             // ... 原有的删除代码 ...
         } else {
             QMessageBox::warning(this, tr("提示"),
-                               tr("请先选择要删除的事件"));
+                                 tr("请先选择要删除的事件"));
         }
     }
 }
@@ -417,13 +431,13 @@ void MainWindow::setupWeekView()
     if (!weekView) {
         weekView = new QWidget(this);
         QVBoxLayout* mainLayout = new QVBoxLayout(weekView);
-        
+
         // 年月显示
         QLabel* yearMonthLabel = new QLabel(weekView);
         yearMonthLabel->setObjectName("yearMonthLabel");
         yearMonthLabel->setAlignment(Qt::AlignLeft);
         mainLayout->addWidget(yearMonthLabel);
-        
+
         // 星期标题和日期显示的容器
         QWidget* calendarContainer = new QWidget(weekView);
         QVBoxLayout* calendarLayout = new QVBoxLayout(calendarContainer);
@@ -442,17 +456,17 @@ void MainWindow::setupWeekView()
             weekDayLayout->addWidget(label);
         }
         calendarLayout->addLayout(weekDayLayout);
-        
+
         // 日期显示区域
         QHBoxLayout* dateLayout = new QHBoxLayout();
         dateLayout->setSpacing(0);  // 减少水平间距
-        
+
         // 向前按钮
         QPushButton* prevBtn = new QPushButton("<", weekView);
         prevBtn->setFixedWidth(30);
         connect(prevBtn, &QPushButton::clicked, this, &MainWindow::showPreviousWeek);
         dateLayout->addWidget(prevBtn);
-        
+
         // 日期显示
         QHBoxLayout* daysLayout = new QHBoxLayout();
         daysLayout->setSpacing(0);  // 减少水平间距
@@ -468,31 +482,31 @@ void MainWindow::setupWeekView()
                 // ui->calendarWidget->setSelectedDate(date);
                 // 直接更新事件列表
                 updateWeekEvents(date);
-                
+
                 // 更新所有按钮的选中状态
-                QList<QPushButton*> buttons = weekView->findChildren<QPushButton*>();
+                QList<QPushButton *> buttons = weekView->findChildren<QPushButton *>();
                 for (int j = 1; j <= 7; ++j) {
-                    QDate btnDate = currentWeekStart.addDays(j-1);
+                    QDate btnDate = currentWeekStart.addDays(j - 1);
                     buttons[j]->setChecked(btnDate == date);
                 }
             });
             daysLayout->addWidget(dayBtn);
         }
         dateLayout->addLayout(daysLayout);
-        
+
         // 向后按钮
         QPushButton* nextBtn = new QPushButton(">", weekView);
         nextBtn->setFixedWidth(30);
         connect(nextBtn, &QPushButton::clicked, this, &MainWindow::showNextWeek);
         dateLayout->addWidget(nextBtn);
-        
+
         calendarLayout->addLayout(dateLayout);
         mainLayout->addWidget(calendarContainer);
-        
+
         // 事件列表
         eventListWidget = new QListWidget(weekView);
         mainLayout->addWidget(eventListWidget);
-        
+
         // 设置样式
         weekView->setStyleSheet(R"(
             QWidget {
@@ -543,7 +557,7 @@ void MainWindow::setupWeekView()
         weekView->setParent(centralWidget());
         weekView->setGeometry(centralWidget()->rect());
     }
-    
+
     weekView->show();
     ui->calendarWidget->hide();
     ui->rightWidget->hide();  // 隐藏右侧部件
@@ -553,21 +567,21 @@ void MainWindow::setupWeekView()
 void MainWindow::updateWeekView()
 {
     if (!weekView) return;
-    
+
     // 更新年月标签
-    QLabel* yearMonthLabel = weekView->findChild<QLabel*>("yearMonthLabel");
+    QLabel* yearMonthLabel = weekView->findChild<QLabel *>("yearMonthLabel");
     if (yearMonthLabel) {
         yearMonthLabel->setText(QString("%1年%2月").arg(currentWeekStart.year())
-                                                 .arg(currentWeekStart.month()));
+                                .arg(currentWeekStart.month()));
     }
-    
+
     // 更新日期按钮
-    QList<QPushButton*> dayButtons = weekView->findChildren<QPushButton*>();
+    QList<QPushButton *> dayButtons = weekView->findChildren<QPushButton *>();
     QDate selectedDate = currentWeekStart; // 默认选中第一天
     // 跳过前后箭头按钮
     for (int i = 1; i <= 7; ++i) {
         QPushButton* btn = dayButtons[i];
-        QDate date = currentWeekStart.addDays(i-1);
+        QDate date = currentWeekStart.addDays(i - 1);
         btn->setText(QString::number(date.day()));
         if (i == 1) {
             btn->setChecked(true);
@@ -576,7 +590,7 @@ void MainWindow::updateWeekView()
             btn->setChecked(false);
         }
     }
-    
+
     // 更新事件列表
     updateWeekEvents(selectedDate);
 }
@@ -585,7 +599,7 @@ void MainWindow::updateWeekEvents(const QDate& date)
 {
     eventListWidget->clear();
     eventListWidget->setSelectionMode(QAbstractItemView::SingleSelection);  // 确保单选模式
-    
+
     if (eventMap.contains(date)) {
         int eventIndex = 0;  // 用于跟踪事件索引
         for (const EventItem& event : eventMap[date]) {
@@ -594,7 +608,7 @@ void MainWindow::updateWeekEvents(const QDate& date)
             QVBoxLayout* eventLayout = new QVBoxLayout(eventWidget);
             eventLayout->setSpacing(0);
             eventLayout->setContentsMargins(0, 0, 0, 0);
-            
+
             // 添加事件标题（第一行）
             QWidget* titleContainer = new QWidget;
             QHBoxLayout* titleLayout = new QHBoxLayout(titleContainer);
@@ -605,21 +619,21 @@ void MainWindow::updateWeekEvents(const QDate& date)
             QLabel* colorIndicator = new QLabel;
             colorIndicator->setFixedSize(12, 12);
             colorIndicator->setStyleSheet(QString("background-color: %1; border-radius: 6px;")
-                                        .arg(event.color.name()));
+                                          .arg(event.color.name()));
             titleLayout->addWidget(colorIndicator);
 
             // 添加时间和标题
             QLabel* titleLabel = new QLabel;
             QString timeText = QString("%1 - %2")
-                                .arg(event.startTime.toString("HH:mm"))
-                                .arg(event.endTime.toString("HH:mm"));
+                               .arg(event.startTime.toString("HH:mm"))
+                               .arg(event.endTime.toString("HH:mm"));
             titleLabel->setStyleSheet("color: #666666; font-size: 14px; background: transparent;");
             titleLabel->setText(timeText + " " + event.text);
             titleLabel->setMinimumHeight(30);
             titleLayout->addWidget(titleLabel, 1);  // 添加拉伸因子1
 
             eventLayout->addWidget(titleContainer);
-            
+
             // 添加事件描述（第二行）
             if (!event.description.isEmpty()) {
                 QLabel* descLabel = new QLabel;
@@ -635,7 +649,7 @@ void MainWindow::updateWeekEvents(const QDate& date)
                 descLabel->adjustSize();  // 自动调整大小以适应内容
                 eventLayout->addWidget(descLabel);
             }
-            
+
             // 创建列表项并设置widget
             QListWidgetItem* eventItem = new QListWidgetItem;
             eventItem->setData(Qt::UserRole, eventIndex);  // 存储事件索引
@@ -643,12 +657,12 @@ void MainWindow::updateWeekEvents(const QDate& date)
             eventItem->setSizeHint(eventWidget->sizeHint());  // 使用容器的建议大小
             eventListWidget->addItem(eventItem);
             eventListWidget->setItemWidget(eventItem, eventWidget);
-            
+
             eventIndex++;
         }
-        
+
         // 连接选择改变信号
-        connect(eventListWidget, &QListWidget::itemClicked, this, [this](QListWidgetItem* item) {
+        connect(eventListWidget, &QListWidget::itemClicked, this, [this](QListWidgetItem * item) {
             int eventIndex = item->data(Qt::UserRole).toInt();
             // 选中整个事件（所有相关项）
             for (int i = 0; i < eventListWidget->count(); ++i) {
