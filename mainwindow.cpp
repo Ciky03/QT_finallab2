@@ -528,136 +528,142 @@ void MainWindow::on_action_delete_triggered()
 
 void MainWindow::setupWeekView()
 {
-    if (!weekView) {
-        weekView = new QWidget(this);
-        QVBoxLayout* mainLayout = new QVBoxLayout(weekView);
-
-        // 年月显示
-        QLabel* yearMonthLabel = new QLabel(weekView);
-        yearMonthLabel->setObjectName("yearMonthLabel");
-        yearMonthLabel->setAlignment(Qt::AlignLeft);
-        mainLayout->addWidget(yearMonthLabel);
-
-        // 星期标题和日期显示的容器
-        QWidget* calendarContainer = new QWidget(weekView);
-        QVBoxLayout* calendarLayout = new QVBoxLayout(calendarContainer);
-        calendarLayout->setSpacing(0);  // 减少垂直间距
-        calendarLayout->setContentsMargins(0, 0, 0, 0);  // 移除边距
-
-        // 星期标题
-        QHBoxLayout* weekDayLayout = new QHBoxLayout();
-        weekDayLayout->setSpacing(0);  // 减少水平间距
-        weekDayLayout->setContentsMargins(30, 0, 30, 0);  // 左右留出箭头按钮的空间
-        QStringList weekDays = {tr("一"), tr("二"), tr("三"), tr("四"), tr("五"), tr("六"), tr("日")};
-        for (const QString& day : weekDays) {
-            QLabel* label = new QLabel(day, weekView);
-            label->setAlignment(Qt::AlignCenter);
-            label->setFixedWidth(120);  // 设置固定宽度
-            weekDayLayout->addWidget(label);
-        }
-        calendarLayout->addLayout(weekDayLayout);
-
-        // 日期显示区域
-        QHBoxLayout* dateLayout = new QHBoxLayout();
-        dateLayout->setSpacing(0);  // 减少水平间距
-
-        // 向前按钮
-        QPushButton* prevBtn = new QPushButton("<", weekView);
-        prevBtn->setFixedWidth(30);
-        connect(prevBtn, &QPushButton::clicked, this, &MainWindow::showPreviousWeek);
-        dateLayout->addWidget(prevBtn);
-
-        // 期显示
-        QHBoxLayout* daysLayout = new QHBoxLayout();
-        daysLayout->setSpacing(0);  // 减少水平间距
-        QButtonGroup* buttonGroup = new QButtonGroup(this);  // 添加按钮组
-        for (int i = 0; i < 7; ++i) {
-            QPushButton* dayBtn = new QPushButton(weekView);
-            dayBtn->setFixedSize(120, 40);
-            dayBtn->setCheckable(true);
-            buttonGroup->addButton(dayBtn);  // 将按钮添加到按钮组
-            connect(dayBtn, &QPushButton::clicked, [this, i]() {
-                QDate date = currentWeekStart.addDays(i);
-                // 不再更新隐藏的日历控件
-                // ui->calendarWidget->setSelectedDate(date);
-                // 直接更新事件列表
-                updateWeekEvents(date);
-
-                // 更新所有按钮的选中状态
-                QList<QPushButton *> buttons = weekView->findChildren<QPushButton *>();
-                for (int j = 1; j <= 7; ++j) {
-                    QDate btnDate = currentWeekStart.addDays(j - 1);
-                    buttons[j]->setChecked(btnDate == date);
-                }
-            });
-            daysLayout->addWidget(dayBtn);
-        }
-        dateLayout->addLayout(daysLayout);
-
-        // 向后按钮
-        QPushButton* nextBtn = new QPushButton(">", weekView);
-        nextBtn->setFixedWidth(30);
-        connect(nextBtn, &QPushButton::clicked, this, &MainWindow::showNextWeek);
-        dateLayout->addWidget(nextBtn);
-
-        calendarLayout->addLayout(dateLayout);
-        mainLayout->addWidget(calendarContainer);
-
-        // 事件列表
-        eventListWidget = new QListWidget(weekView);
-        mainLayout->addWidget(eventListWidget);
-
-        // 设置样式
-        weekView->setStyleSheet(R"(
-            QWidget {
-                color: black;
-            }
-            QLabel {
-                font-size: 14px;
-                color: black;
-            }
-            #yearMonthLabel {
-                font-size: 16px;
-                font-weight: bold;
-                padding: 10px 0;
-                color: black;
-            }
-            QPushButton {
-                border: none;
-                background: transparent;
-                font-size: 14px;
-                color: black;
-            }
-            QPushButton:checked {
-                background: #007bff;
-                color: white;
-                border-radius: 5px;
-            }
-            QPushButton:hover:!checked {
-                background: #f0f0f0;
-                color: black;
-                border-radius: 5px;
-            }
-            QListWidget {
-                color: black;
-                font-size: 13px;
-            }
-            QListWidget::item {
-                padding: 8px;
-                border-bottom: 1px solid #eee;
-                min-height: 30px;
-            }
-            QListWidget::item:selected {
-                background: #f5f5f5;
-                color: black;
-            }
-        )");
-
-        // 不再使用setCentralWidget，而是隐藏原中央部件并显示weekView
-        weekView->setParent(centralWidget());
-        weekView->setGeometry(centralWidget()->rect());
+    // 如果weekView已经存在，先删除它
+    if (weekView) {
+        delete weekView;
+        weekView = nullptr;
     }
 
+    // 创建新的weekView
+    weekView = new QWidget(this);
+    QVBoxLayout* mainLayout = new QVBoxLayout(weekView);
+
+    // 年月显示
+    QLabel* yearMonthLabel = new QLabel(weekView);
+    yearMonthLabel->setObjectName("yearMonthLabel");
+    yearMonthLabel->setAlignment(Qt::AlignLeft);
+    mainLayout->addWidget(yearMonthLabel);
+
+    // 星期标题和日期显示的容器
+    QWidget* calendarContainer = new QWidget(weekView);
+    QVBoxLayout* calendarLayout = new QVBoxLayout(calendarContainer);
+    calendarLayout->setSpacing(0);  // 减少垂直间距
+    calendarLayout->setContentsMargins(0, 0, 0, 0);  // 移除边距
+
+    // 星期标题
+    QHBoxLayout* weekDayLayout = new QHBoxLayout();
+    weekDayLayout->setSpacing(0);  // 减少水平间距
+    weekDayLayout->setContentsMargins(30, 0, 30, 0);  // 左右留出箭头按钮的空间
+    QStringList weekDays = {tr("一"), tr("二"), tr("三"), tr("四"), tr("五"), tr("六"), tr("日")};
+    for (const QString& day : weekDays) {
+        QLabel* label = new QLabel(day, weekView);
+        label->setAlignment(Qt::AlignCenter);
+        label->setFixedWidth(120);  // 设置固定宽度
+        weekDayLayout->addWidget(label);
+    }
+    calendarLayout->addLayout(weekDayLayout);
+
+    // 日期显示区域
+    QHBoxLayout* dateLayout = new QHBoxLayout();
+    dateLayout->setSpacing(0);  // 减少水平间距
+
+    // 向前按钮
+    QPushButton* prevBtn = new QPushButton("<", weekView);
+    prevBtn->setFixedWidth(30);
+    connect(prevBtn, &QPushButton::clicked, this, &MainWindow::showPreviousWeek);
+    dateLayout->addWidget(prevBtn);
+
+    // 期显示
+    QHBoxLayout* daysLayout = new QHBoxLayout();
+    daysLayout->setSpacing(0);  // 减少水平间距
+    QButtonGroup* buttonGroup = new QButtonGroup(this);  // 添加按钮组
+    for (int i = 0; i < 7; ++i) {
+        QPushButton* dayBtn = new QPushButton(weekView);
+        dayBtn->setFixedSize(120, 40);
+        dayBtn->setCheckable(true);
+        buttonGroup->addButton(dayBtn);  // 将按钮添加到按钮组
+        connect(dayBtn, &QPushButton::clicked, [this, i]() {
+            QDate date = currentWeekStart.addDays(i);
+            // 不再更新隐藏的日历控件
+            // ui->calendarWidget->setSelectedDate(date);
+            // 直接更新事件列表
+            updateWeekEvents(date);
+
+            // 更新所有按钮的选中状态
+            QList<QPushButton *> buttons = weekView->findChildren<QPushButton *>();
+            for (int j = 1; j <= 7; ++j) {
+                QDate btnDate = currentWeekStart.addDays(j - 1);
+                buttons[j]->setChecked(btnDate == date);
+            }
+        });
+        daysLayout->addWidget(dayBtn);
+    }
+    dateLayout->addLayout(daysLayout);
+
+    // 向后按钮
+    QPushButton* nextBtn = new QPushButton(">", weekView);
+    nextBtn->setFixedWidth(30);
+    connect(nextBtn, &QPushButton::clicked, this, &MainWindow::showNextWeek);
+    dateLayout->addWidget(nextBtn);
+
+    calendarLayout->addLayout(dateLayout);
+    mainLayout->addWidget(calendarContainer);
+
+    // 事件列表
+    eventListWidget = new QListWidget(weekView);
+    mainLayout->addWidget(eventListWidget);
+
+    // 设置样式
+    weekView->setStyleSheet(R"(
+        QWidget {
+            color: black;
+        }
+        QLabel {
+            font-size: 14px;
+            color: black;
+        }
+        #yearMonthLabel {
+            font-size: 16px;
+            font-weight: bold;
+            padding: 10px 0;
+            color: black;
+        }
+        QPushButton {
+            border: none;
+            background: transparent;
+            font-size: 14px;
+            color: black;
+        }
+        QPushButton:checked {
+            background: #007bff;
+            color: white;
+            border-radius: 5px;
+        }
+        QPushButton:hover:!checked {
+            background: #f0f0f0;
+            color: black;
+            border-radius: 5px;
+        }
+        QListWidget {
+            color: black;
+            font-size: 13px;
+        }
+        QListWidget::item {
+            padding: 8px;
+            border-bottom: 1px solid #eee;
+            min-height: 30px;
+        }
+        QListWidget::item:selected {
+            background: #f5f5f5;
+            color: black;
+        }
+    )");
+
+    // 不再使用setCentralWidget，而是隐藏原中央部件并显示weekView
+    weekView->setParent(centralWidget());
+    weekView->setGeometry(centralWidget()->rect());
+
+    // 添加这些行来显示和更新周视图
     weekView->show();
     ui->calendarWidget->hide();
     ui->rightWidget->hide();  // 隐藏右侧部件
