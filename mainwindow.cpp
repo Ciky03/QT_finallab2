@@ -245,7 +245,7 @@ void MainWindow::on_action_new_triggered()
                         delete widget;
                     }
                     
-                    // 创建新的事���指示器
+                    // 创建新的事件指示器
                     QWidget* dotsContainer = new QWidget(btn);
                     dotsContainer->setObjectName("dotsContainer");
                     QHBoxLayout* dotsLayout = new QHBoxLayout(dotsContainer);
@@ -392,13 +392,34 @@ void MainWindow::on_action_edit_triggered()
                                  tr("请先选择要编辑的事件"));
         }
     } else {
-        // 原有的月视图编辑代码
+        // 月视图编辑代码
         QListWidgetItem* currentItem = ui->eventList->currentItem();
         if (currentItem) {
-            // ... 原有的编辑代码 ...
+            QDate selectedDate = ui->calendarWidget->selectedDate();
+            int currentRow = ui->eventList->row(currentItem);
+            EventItem& event = eventMap[selectedDate][currentRow];
+
+            EventDialog dialog(this);
+            dialog.setEventData(event.text,
+                              event.startTime,
+                              event.endTime,
+                              event.description,
+                              event.color);
+
+            if (dialog.exec() == QDialog::Accepted) {
+                // 更新事件数据
+                event.text = dialog.getEventTitle();
+                event.startTime = dialog.getStartTime();
+                event.endTime = dialog.getEndTime();
+                event.description = dialog.getDescription();
+                event.color = dialog.getEventColor();
+
+                // 更新显示
+                updateEventList();
+            }
         } else {
             QMessageBox::warning(this, tr("提示"),
-                                 tr("请先选择要编辑的事件"));
+                               tr("请先选择要编辑的事件"));
         }
     }
 }
@@ -477,10 +498,27 @@ void MainWindow::on_action_delete_triggered()
                                tr("请先选择要删除的事件"));
         }
     } else {
-        // 原有的月视图删除代码
+        // 月视图删除代码
         QListWidgetItem* currentItem = ui->eventList->currentItem();
         if (currentItem) {
-            // ... 原有的删除代码 ...
+            QDate selectedDate = ui->calendarWidget->selectedDate();
+            int currentRow = ui->eventList->row(currentItem);
+            QString eventText = eventMap[selectedDate][currentRow].text;
+
+            if (QMessageBox::question(this, tr("确认删除"),
+                                    tr("是否确定删除事件：%1？").arg(eventText))
+                    == QMessageBox::Yes) {
+                // 从事件映射中删除
+                eventMap[selectedDate].removeAt(currentRow);
+                
+                // 如果该日期没有事件了，从映射中移除
+                if (eventMap[selectedDate].isEmpty()) {
+                    eventMap.remove(selectedDate);
+                }
+
+                // 更新显示
+                updateEventList();
+            }
         } else {
             QMessageBox::warning(this, tr("提示"),
                                tr("请先选择要删除的事件"));
