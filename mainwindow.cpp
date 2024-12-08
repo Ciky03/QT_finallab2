@@ -198,8 +198,23 @@ MainWindow::~MainWindow()
 
 void MainWindow::on_action_new_triggered()
 {
+    QDate selectedDate;
+    if (weekView && weekView->isVisible()) {
+        // 在周视图中，获取当前选中的日期
+        QList<QPushButton*> buttons = weekView->findChildren<QPushButton*>();
+        for (int i = 1; i <= 7; ++i) {
+            if (buttons[i]->isChecked()) {
+                selectedDate = currentWeekStart.addDays(i-1);
+                break;
+            }
+        }
+    } else {
+        // 在月视图中，使用日历控件的选中日期
+        selectedDate = ui->calendarWidget->selectedDate();
+    }
+
     EventDialog dialog(this);
-    QDateTime startTime = ui->calendarWidget->selectedDate().startOfDay();
+    QDateTime startTime = selectedDate.startOfDay();
     dialog.setEventData("", startTime,
                        startTime.addSecs(3600),
                        "", QColor(Qt::blue));
@@ -216,7 +231,11 @@ void MainWindow::on_action_new_triggered()
         eventMap[eventDate].append(newEvent);
 
         // 更新显示
-        updateEventList();
+        if (weekView && weekView->isVisible()) {
+            updateWeekEvents(selectedDate);
+        } else {
+            updateEventList();
+        }
     }
 }
 
@@ -295,60 +314,101 @@ void MainWindow::updateEventList()
 
 void MainWindow::on_action_edit_triggered()
 {
-    QListWidgetItem *currentItem = ui->eventList->currentItem();
-    if (currentItem) {
-        EventDialog dialog(this);
-        QDate selectedDate = ui->calendarWidget->selectedDate();
-        int currentRow = ui->eventList->row(currentItem);
-        
-        // 获取当前编辑的事件
-        EventItem& event = eventMap[selectedDate][currentRow];
-        
-        dialog.setEventData(event.text,
-                          event.startTime,
-                          event.endTime,
-                          event.description,
-                          event.color);
-        
-        if (dialog.exec() == QDialog::Accepted) {
-            // 更新事件数据
-            event.text = dialog.getEventTitle();
-            event.startTime = dialog.getStartTime();
-            event.endTime = dialog.getEndTime();
-            event.description = dialog.getDescription();
-            event.color = dialog.getEventColor();
-            
-            // 更新显示
-            updateEventList();
+    if (weekView && weekView->isVisible()) {
+        // 在周视图中编辑事件
+        QListWidgetItem* currentItem = eventListWidget->currentItem();
+        if (currentItem) {
+            // 获取当前选中的日期
+            QDate selectedDate;
+            QList<QPushButton*> buttons = weekView->findChildren<QPushButton*>();
+            for (int i = 1; i <= 7; ++i) {
+                if (buttons[i]->isChecked()) {
+                    selectedDate = currentWeekStart.addDays(i-1);
+                    break;
+                }
+            }
+
+            int eventIndex = currentItem->data(Qt::UserRole).toInt();
+            EventItem& event = eventMap[selectedDate][eventIndex];
+
+            EventDialog dialog(this);
+            dialog.setEventData(event.text,
+                              event.startTime,
+                              event.endTime,
+                              event.description,
+                              event.color);
+
+            if (dialog.exec() == QDialog::Accepted) {
+                // 更新事件数据
+                event.text = dialog.getEventTitle();
+                event.startTime = dialog.getStartTime();
+                event.endTime = dialog.getEndTime();
+                event.description = dialog.getDescription();
+                event.color = dialog.getEventColor();
+
+                // 更新显示
+                updateWeekEvents(selectedDate);
+            }
+        } else {
+            QMessageBox::warning(this, tr("提示"),
+                               tr("请先选择要编辑的事件"));
         }
     } else {
-        QMessageBox::warning(this, tr("提示"),
-                           tr("请先选择要编辑的事件"));
+        // 原有的月视图编辑代码
+        QListWidgetItem* currentItem = ui->eventList->currentItem();
+        if (currentItem) {
+            // ... 原有的编辑代码 ...
+        } else {
+            QMessageBox::warning(this, tr("提示"),
+                               tr("请先选择要编辑的事件"));
+        }
     }
 }
 
 void MainWindow::on_action_delete_triggered()
 {
-    QListWidgetItem *currentItem = ui->eventList->currentItem();
-    if (currentItem) {
-        if (QMessageBox::question(this, tr("确认删除"),
-                                tr("是否确定删除事件：%1？").arg(currentItem->text()))
-                == QMessageBox::Yes) {
-            QDate selectedDate = ui->calendarWidget->selectedDate();
-            int currentRow = ui->eventList->row(currentItem);
-            
-            // 从事件映射中删除
-            eventMap[selectedDate].removeAt(currentRow);
-            if (eventMap[selectedDate].isEmpty()) {
-                eventMap.remove(selectedDate);
+    if (weekView && weekView->isVisible()) {
+        // 在周视图中删除事件
+        QListWidgetItem* currentItem = eventListWidget->currentItem();
+        if (currentItem) {
+            // 获取当前选中的日期
+            QDate selectedDate;
+            QList<QPushButton*> buttons = weekView->findChildren<QPushButton*>();
+            for (int i = 1; i <= 7; ++i) {
+                if (buttons[i]->isChecked()) {
+                    selectedDate = currentWeekStart.addDays(i-1);
+                    break;
+                }
             }
-            
-            // 更新显示
-            updateEventList();
+
+            int eventIndex = currentItem->data(Qt::UserRole).toInt();
+            QString eventText = eventMap[selectedDate][eventIndex].text;
+
+            if (QMessageBox::question(this, tr("确认删除"),
+                                    tr("是否确定删除事件：%1？").arg(eventText))
+                    == QMessageBox::Yes) {
+                // 从事件映射中删除
+                eventMap[selectedDate].removeAt(eventIndex);
+                if (eventMap[selectedDate].isEmpty()) {
+                    eventMap.remove(selectedDate);
+                }
+
+                // 更新显示
+                updateWeekEvents(selectedDate);
+            }
+        } else {
+            QMessageBox::warning(this, tr("提示"),
+                               tr("请先选择要删除的事件"));
         }
     } else {
-        QMessageBox::warning(this, tr("提示"),
-                           tr("请先选择要删除的事件"));
+        // 原有的月视图删除代码
+        QListWidgetItem* currentItem = ui->eventList->currentItem();
+        if (currentItem) {
+            // ... 原有的删除代码 ...
+        } else {
+            QMessageBox::warning(this, tr("提示"),
+                               tr("请先选择要删除的事件"));
+        }
     }
 }
 
