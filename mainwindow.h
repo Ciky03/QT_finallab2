@@ -6,6 +6,12 @@
 #include <QMap>
 #include <QDate>
 #include <QList>
+#include <QListWidget>
+#include <QPushButton>
+#include <QVBoxLayout>
+#include <QHBoxLayout>
+#include <QLabel>
+#include <QButtonGroup>
 
 QT_BEGIN_NAMESPACE
 namespace Ui {
@@ -41,9 +47,18 @@ private:
         QDateTime endTime;
         QString description;
     };
-    
+
     Ui::MainWindow *ui;
     QSystemTrayIcon *trayIcon;
     QMap<QDate, QList<EventItem>> eventMap;  // 用于存储不同日期的事件
+    QWidget *weekView = nullptr;
+    QDate currentWeekStart;
+    QListWidget *eventListWidget;
+
+    void setupWeekView();
+    void updateWeekView();
+    void updateWeekEvents(const QDate& date);
+    void showPreviousWeek();
+    void showNextWeek();
 };
 #endif // MAINWINDOW_H
