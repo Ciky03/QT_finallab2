@@ -113,15 +113,16 @@ bool IDatabase::updateEvent(int eventId, const QString& title,
 
 bool IDatabase::deleteEvent(int eventId)
 {
-    QSqlQuery query;
-    query.prepare("DELETE FROM Events WHERE id = :id");
+    QSqlQuery query(db);
+    query.prepare("DELETE FROM events WHERE id = :id");
     query.bindValue(":id", eventId);
-
+    
     if (!query.exec()) {
-        qDebug() << "Error deleting event:" << query.lastError().text();
+        qDebug() << "Failed to delete event:" << query.lastError().text();
         return false;
     }
-    return true;
+    
+    return query.numRowsAffected() > 0;
 }
 
 QList<QPair<int, QVariantMap>> IDatabase::getEventsByDate(const QDate& date)
