@@ -177,7 +177,7 @@ MainWindow::MainWindow(QWidget *parent)
     // 初始化工具栏
     ui->mainToolBar->setIconSize(QSize(24, 24));
 
-    // 如果系统主题没有提供图标，则使���自定义图标
+    // 如果系统主题没有提供图标，则使用自定义图标
     if (ui->action_new->icon().isNull()) {
         ui->action_new->setIcon(style()->standardIcon(QStyle::SP_FileIcon));
     }
@@ -212,7 +212,7 @@ MainWindow::MainWindow(QWidget *parent)
     trayIcon->setContextMenu(trayMenu);
     trayIcon->show();
 
-    // 设置事件列表的���
+    // 设置事件列表的
     ui->eventList->setItemDelegate(new EventItemDelegate(ui->eventList));
 
     // 设置拖放
@@ -747,18 +747,18 @@ void MainWindow::setupWeekView()
 
     // 星期标题
     QHBoxLayout* weekDayLayout = new QHBoxLayout();
-    weekDayLayout->setSpacing(0);  // 减少水平间距
+    weekDayLayout->setSpacing(2);  // 增加间距
     weekDayLayout->setContentsMargins(30, 0, 30, 0);  // 左右留出箭头按钮的空间
     QStringList weekDays = {tr("一"), tr("二"), tr("三"), tr("四"), tr("五"), tr("六"), tr("日")};
     for (const QString& day : weekDays) {
         QLabel* label = new QLabel(day, weekView);
         label->setAlignment(Qt::AlignCenter);
-        label->setFixedWidth(120);  // 设置固定度
+        label->setFixedWidth(100);  // 从120px改为100px
         weekDayLayout->addWidget(label);
     }
     calendarLayout->addLayout(weekDayLayout);
 
-    // 日��显示区域
+    // 日期显示区域
     QHBoxLayout* dateLayout = new QHBoxLayout();
     dateLayout->setSpacing(0);  // 减少水平间距
 
@@ -768,20 +768,17 @@ void MainWindow::setupWeekView()
     connect(prevBtn, &QPushButton::clicked, this, &MainWindow::showPreviousWeek);
     dateLayout->addWidget(prevBtn);
 
-    // 期显示
+    // 日期显示
     QHBoxLayout* daysLayout = new QHBoxLayout();
-    daysLayout->setSpacing(0);  // 少水平间距
-    QButtonGroup* buttonGroup = new QButtonGroup(this);  // 添加按钮组
+    daysLayout->setSpacing(2);  // 增加间距
+    QButtonGroup* buttonGroup = new QButtonGroup(this);
     for (int i = 0; i < 7; ++i) {
         QPushButton* dayBtn = new QPushButton(weekView);
-        dayBtn->setFixedSize(120, 40);
+        dayBtn->setFixedSize(100, 40);  // 从120px改为100px，保持高度不变
         dayBtn->setCheckable(true);
-        buttonGroup->addButton(dayBtn);  // 将按钮添加到按钮组
+        buttonGroup->addButton(dayBtn);
         connect(dayBtn, &QPushButton::clicked, [this, i]() {
             QDate date = currentWeekStart.addDays(i);
-            // 不再更隐藏日件
-            // ui->calendarWidget->setSelectedDate(date);
-            // 直接事件列表
             updateWeekEvents(date);
 
             // 更新所有按钮的选中状态
@@ -1152,7 +1149,7 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
             // 获取日历视图的大小信息
             int totalHeight = calendar->height();
             int totalWidth = calendar->width();
-            int headerHeight = totalHeight / 8;  // 估计标题栏��度
+            int headerHeight = totalHeight / 8;  // 估计标题栏度
             int cellHeight = (totalHeight - headerHeight) / 6;
             int cellWidth = totalWidth / 7;
 
@@ -1185,7 +1182,7 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
             return true;
         }
     } else if (dayView && dayView->isVisible()) {
-        // 处���日视图的事件点击
+        // 处日视图的事件点击
         if (event->type() == QEvent::MouseButtonPress) {
             QWidget* widget = qobject_cast<QWidget *>(obj);
             if (widget && widget->parent()) {
@@ -1648,7 +1645,7 @@ void MainWindow::updateDayView()
         QScrollArea* scrollArea = dayView->findChild<QScrollArea *>();
         if (!scrollArea || !scrollArea->widget()) return;
 
-        // 获取所有带有 timeSlot 属性的部件
+        // ��取所有带有 timeSlot 属性的部件
         QList<QWidget *> timeSlots;
         foreach (QWidget* widget, scrollArea->widget()->findChildren<QWidget*>()) {
             if (widget->property("timeSlot").isValid()) {
