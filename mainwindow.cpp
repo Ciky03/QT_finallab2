@@ -177,7 +177,7 @@ MainWindow::MainWindow(QWidget *parent)
     // 初始化工具栏
     ui->mainToolBar->setIconSize(QSize(24, 24));
 
-    // 如果系统主题没有提供图标，则使用自定义图标
+    // 如果系统主题没有提供图标，则使���自定义图标
     if (ui->action_new->icon().isNull()) {
         ui->action_new->setIcon(style()->standardIcon(QStyle::SP_FileIcon));
     }
@@ -212,7 +212,7 @@ MainWindow::MainWindow(QWidget *parent)
     trayIcon->setContextMenu(trayMenu);
     trayIcon->show();
 
-    // 设置事件列表的理
+    // 设置事件列表的���
     ui->eventList->setItemDelegate(new EventItemDelegate(ui->eventList));
 
     // 设置拖放
@@ -646,7 +646,7 @@ void MainWindow::on_action_delete_triggered()
         // 日视图删除
         QListWidget* detailsList = dayView->findChild<QListWidget *>("dayViewDetailsList");
         if (!detailsList || detailsList->count() == 0) {
-            QMessageBox::warning(this, tr("提示"), tr("请先选择要删除的事件"));
+            QMessageBox::warning(this, tr("��示"), tr("请先选择要删除的事件"));
             return;
         }
 
@@ -755,7 +755,7 @@ void MainWindow::setupWeekView()
         weekView = nullptr;
     }
 
-    // 创建���的weekView
+    // 创建的weekView
     weekView = new QWidget(this);
     QVBoxLayout* mainLayout = new QVBoxLayout(weekView);
 
@@ -784,7 +784,7 @@ void MainWindow::setupWeekView()
     }
     calendarLayout->addLayout(weekDayLayout);
 
-    // 日期显示区域
+    // 日��显示区域
     QHBoxLayout* dateLayout = new QHBoxLayout();
     dateLayout->setSpacing(0);  // 减少水平间距
 
@@ -1178,7 +1178,7 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
             // 获取日历视图的大小信息
             int totalHeight = calendar->height();
             int totalWidth = calendar->width();
-            int headerHeight = totalHeight / 8;  // 估计标题栏高度
+            int headerHeight = totalHeight / 8;  // 估计标题栏��度
             int cellHeight = (totalHeight - headerHeight) / 6;
             int cellWidth = totalWidth / 7;
 
@@ -1211,7 +1211,7 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
             return true;
         }
     } else if (dayView && dayView->isVisible()) {
-        // 处理日视图的事件点击
+        // 处���日视图的事件点击
         if (event->type() == QEvent::MouseButtonPress) {
             QWidget* widget = qobject_cast<QWidget *>(obj);
             if (widget && widget->parent()) {
@@ -1990,5 +1990,62 @@ void MainWindow::showEventReminder(const EventItem& event)
 
     // 同时发出提示音
     QApplication::beep();
+}
+
+void MainWindow::closeEvent(QCloseEvent *event)
+{
+    QMessageBox msgBox(this);
+    msgBox.setWindowTitle(tr("退出确认"));
+    msgBox.setText(tr("您要退出程序还是最小化到系统托盘？"));
+    
+    // 设置按钮
+    QPushButton *minimizeButton = msgBox.addButton(tr("最小化"), QMessageBox::ActionRole);
+    QPushButton *exitButton = msgBox.addButton(tr("退出"), QMessageBox::ActionRole);
+    QPushButton *cancelButton = msgBox.addButton(tr("取消"), QMessageBox::RejectRole);
+    
+    // 设置样式
+    msgBox.setStyleSheet(R"(
+        QMessageBox {
+            background-color: white;
+        }
+        QLabel {
+            color: black;
+            padding: 10px;
+        }
+        QPushButton {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 6px 12px;
+            min-width: 80px;
+        }
+        QPushButton:hover {
+            background-color: #0056b3;
+        }
+    )");
+    
+    msgBox.exec();
+    
+    if (msgBox.clickedButton() == minimizeButton) {
+        event->ignore();  // 忽略关闭事件
+        hide();          // 隐藏主窗口
+        
+        // 如果是第一次最小化，显示提示信息
+        if (!trayIcon->isVisible()) {
+            trayIcon->showMessage(
+                tr("提示"),
+                tr("程序已最小化到系统托盘，双击图标可以重新打开窗口。"),
+                QSystemTrayIcon::Information,
+                3000
+            );
+        }
+    } 
+    else if (msgBox.clickedButton() == exitButton) {
+        event->accept();  // 接受关闭事件，程序将退出
+    }
+    else {
+        event->ignore();  // 取消关闭
+    }
 }
 
