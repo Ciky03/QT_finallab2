@@ -46,6 +46,7 @@ private slots:
     void on_action_edit_triggered();
     void on_action_delete_triggered();
     void handleEventDrop(const QDate& newDate, int eventIndex);
+    void onEventItemDoubleClicked(QListWidgetItem* item);
 
 protected:
     void dragEnterEvent(QDragEnterEvent* event) override;
