@@ -514,71 +514,6 @@ void MainWindow::on_action_edit_triggered()
 
                     // 更新日视图
                     updateDayView();
-
-                    // 更新右侧详情显示
-                    detailsList->clear();
-
-                    // 创建新的详情显示部件
-                    QWidget* newDetailWidget = new QWidget;
-                    QVBoxLayout* detailLayout = new QVBoxLayout(newDetailWidget);
-                    detailLayout->setSpacing(15);
-                    detailLayout->setContentsMargins(15, 15, 15, 15);
-
-                    // 标题行（颜色圆圈 + 标题）
-                    QWidget* titleWidget = new QWidget;
-                    titleWidget->setStyleSheet("background: transparent; border: none;");
-                    QHBoxLayout* titleLayout = new QHBoxLayout(titleWidget);
-                    titleLayout->setSpacing(10);
-                    titleLayout->setContentsMargins(0, 0, 0, 0);
-
-                    // 颜色圆圈
-                    QLabel* colorDot = new QLabel;
-                    colorDot->setFixedSize(12, 12);
-                    colorDot->setStyleSheet(QString("background-color: %1; border-radius: 6px; border: none;")
-                                            .arg(event.color.name()));
-                    titleLayout->addWidget(colorDot);
-
-                    // 标题
-                    QLabel* titleLabel = new QLabel(event.text);
-                    titleLabel->setStyleSheet("font-size: 14px; font-weight: bold; color: black; background: transparent; border: none;");
-                    titleLayout->addWidget(titleLabel);
-                    titleLayout->addStretch();
-
-                    detailLayout->addWidget(titleWidget);
-
-                    // 时间
-                    QLabel* timeLabel = new QLabel(QString("%1 - %2")
-                                                   .arg(event.startTime.toString("HH:mm"))
-                                                   .arg(event.endTime.toString("HH:mm")));
-                    timeLabel->setStyleSheet("color: black; margin-left: 22px; background: transparent; border: none;");
-                    detailLayout->addWidget(timeLabel);
-
-                    // 详情（如果有）
-                    if (!event.description.isEmpty()) {
-                        QLabel* descLabel = new QLabel(event.description);
-                        descLabel->setWordWrap(true);
-                        descLabel->setMinimumHeight(100);
-                        descLabel->setAlignment(Qt::AlignTop | Qt::AlignLeft);
-                        descLabel->setStyleSheet(R"(
-                            background-color: #f8f9fa;
-                            padding: 15px;
-                            margin-left: 22px;
-                            margin-right: 10px;
-                            color: black;
-                            font-size: 13px;
-                            line-height: 1.5;
-                            border: none;
-                        )");
-                        detailLayout->addWidget(descLabel);
-                    }
-
-                    detailLayout->addStretch();
-
-                    // 创建列表项并设置部件
-                    QListWidgetItem* item = new QListWidgetItem(detailsList);
-                    item->setSizeHint(QSize(detailsList->width() - 10, 300));
-                    detailsList->addItem(item);
-                    detailsList->setItemWidget(item, newDetailWidget);
                 }
                 break;
             }
@@ -606,11 +541,17 @@ void MainWindow::on_action_edit_triggered()
             EventDialog dialog(this);
             dialog.setEventData(event.text, event.startTime, event.endTime, event.description, event.color);
             if (dialog.exec() == QDialog::Accepted) {
+                // 更新事件信息
                 event.text = dialog.getEventTitle();
                 event.startTime = dialog.getStartTime();
                 event.endTime = dialog.getEndTime();
                 event.description = dialog.getDescription();
                 event.color = dialog.getEventColor();
+
+                // 更新数据库
+                updateEventInDatabase(event.id, event);
+
+                // 更新视图
                 updateWeekView();
                 updateWeekEvents(selectedDate);
             }
@@ -625,17 +566,25 @@ void MainWindow::on_action_edit_triggered()
 
         QDate selectedDate = ui->calendarWidget->selectedDate();
         int currentRow = ui->eventList->row(currentItem);
-        EventItem& event = eventMap[selectedDate][currentRow];
+        
+        if (eventMap.contains(selectedDate) && currentRow < eventMap[selectedDate].size()) {
+            EventItem& event = eventMap[selectedDate][currentRow];
+            EventDialog dialog(this);
+            dialog.setEventData(event.text, event.startTime, event.endTime, event.description, event.color);
+            if (dialog.exec() == QDialog::Accepted) {
+                // 更新事件信息
+                event.text = dialog.getEventTitle();
+                event.startTime = dialog.getStartTime();
+                event.endTime = dialog.getEndTime();
+                event.description = dialog.getDescription();
+                event.color = dialog.getEventColor();
 
-        EventDialog dialog(this);
-        dialog.setEventData(event.text, event.startTime, event.endTime, event.description, event.color);
-        if (dialog.exec() == QDialog::Accepted) {
-            event.text = dialog.getEventTitle();
-            event.startTime = dialog.getStartTime();
-            event.endTime = dialog.getEndTime();
-            event.description = dialog.getDescription();
-            event.color = dialog.getEventColor();
-            updateEventList();
+                // 更新数据库
+                updateEventInDatabase(event.id, event);
+
+                // 更新视图
+                updateEventList();
+            }
         }
     }
 }
@@ -671,7 +620,7 @@ void MainWindow::on_action_delete_triggered()
         for (int i = 0; i < events.size(); ++i) {
             if (events[i].text == eventTitle) {
                 if (QMessageBox::question(this, tr("确认删除"),
-                                          tr("是否确定删除事件：%1？").arg(eventTitle)) == QMessageBox::Yes) {
+                                          tr("是否确定删除事���：%1？").arg(eventTitle)) == QMessageBox::Yes) {
                     // 从数据库中删除
                     deleteEventFromDatabase(events[i].id);
                     
@@ -737,7 +686,7 @@ void MainWindow::on_action_delete_triggered()
             // 从数据库中删除
             deleteEventFromDatabase(eventMap[selectedDate][currentRow].id);
             
-            // 从���存中删除
+            // 从内存中删除
             eventMap[selectedDate].removeAt(currentRow);
             if (eventMap[selectedDate].isEmpty()) {
                 eventMap.remove(selectedDate);
@@ -775,7 +724,7 @@ void MainWindow::setupWeekView()
     QHBoxLayout* weekDayLayout = new QHBoxLayout();
     weekDayLayout->setSpacing(0);  // 减少水平间距
     weekDayLayout->setContentsMargins(30, 0, 30, 0);  // 左右留出箭头按钮的空间
-    QStringList weekDays = {tr("一"), tr("二"), tr("三"), tr("四"), tr("��"), tr("六"), tr("日")};
+    QStringList weekDays = {tr("一"), tr("二"), tr("三"), tr("四"), tr("五"), tr("六"), tr("日")};
     for (const QString& day : weekDays) {
         QLabel* label = new QLabel(day, weekView);
         label->setAlignment(Qt::AlignCenter);
@@ -807,7 +756,7 @@ void MainWindow::setupWeekView()
             QDate date = currentWeekStart.addDays(i);
             // 不再更隐藏日件
             // ui->calendarWidget->setSelectedDate(date);
-            // 直接���事件列表
+            // 直接事件列表
             updateWeekEvents(date);
 
             // 更新所有按钮的选中状态
@@ -1028,7 +977,7 @@ void MainWindow::updateWeekEvents(const QDate& date)
             QListWidgetItem* eventItem = new QListWidgetItem;
             eventItem->setData(Qt::UserRole, eventIndex);  // 存储事件索引
             eventWidget->adjustSize();  // 整容器大小
-            eventItem->setSizeHint(eventWidget->sizeHint());  // 使器的建���大小
+            eventItem->setSizeHint(eventWidget->sizeHint());  // 使器的建大小
             eventListWidget->addItem(eventItem);
             eventListWidget->setItemWidget(eventItem, eventWidget);
 
@@ -1090,7 +1039,7 @@ void MainWindow::dropEvent(QDropEvent* event)
     QCalendarWidget* calendar = ui->calendarWidget;
     QPoint pos = calendar->mapFromGlobal(QCursor::pos());
 
-    // 算���标位置对应的日期
+    // 算标位置对应的日期
     QDate dropDate = calendar->selectedDate();  // 认使用选中日期
 
     // 尝试根据位置计算日期
@@ -1199,7 +1148,7 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
                 // 计算目标日期
                 QDate targetDate = firstDate.addDays(row * 7 + col);
                 
-                // 获取原始事件的信息
+                // 获取原始事件的信���
                 QDate originalDate = calendar->selectedDate();
                 int eventIndex = ui->eventList->currentItem()->data(Qt::UserRole).toInt();
                 
@@ -1482,7 +1431,7 @@ void MainWindow::setupDayView()
     dateTitleLayout->addWidget(nextDayBtn);
     dateTitleLayout->addStretch();
 
-    // 连接按钮信号
+    // 连接��钮信号
     connect(prevDayBtn, &QPushButton::clicked, [this]() {
         currentDate = currentDate.addDays(-1);
         updateDayView();
@@ -1644,7 +1593,7 @@ void MainWindow::setupDayView()
     )");
     rightLayout->addWidget(detailsList);
 
-    mainLayout->addWidget(rightWidget, 1);  // 右侧占1份
+    mainLayout->addWidget(rightWidget, 1);  // 右侧��1份
 
     // 设置日视图位置
     dayView->setParent(centralWidget());
@@ -1761,7 +1710,7 @@ void MainWindow::updateDayView()
                         slotLayout->addWidget(eventWidget);
 
                         // 更新容器宽度
-                        int totalWidth = (slotLayout->count() * (150 + 10)) + 20;  // 事件��度 + 间距
+                        int totalWidth = (slotLayout->count() * (150 + 10)) + 20;  // 事件度 + 间距
                         slot->setMinimumWidth(qMax(500, totalWidth));  // 保持最小宽度
 
                         eventWidget->installEventFilter(this);  // 安装事件过滤器
