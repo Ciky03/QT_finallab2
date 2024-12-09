@@ -353,7 +353,7 @@ void MainWindow::on_action_month_view_triggered()
 
 void MainWindow::on_action_about_triggered()
 {
-    QMessageBox::about(this, tr("关于日历日程控件"),
+    QMessageBox::about(this, tr("关于日历日程控���"),
                        tr("2022441010234-张创阳-桌面日历日程控件"
                          ));
 }
@@ -1102,7 +1102,7 @@ void MainWindow::handleEventDrop(const QDate& newDate, int eventIndex)
         return;
     }
 
-    // 取事件
+    // 取���件
     EventItem event = eventMap[oldDate][eventIndex];
 
     // 调整事件的日期
@@ -1142,7 +1142,7 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
             QDropEvent *dropEvent = static_cast<QDropEvent*>(event);
             QPoint pos = dropEvent->pos();
             
-            // 计算鼠标位置对应的日期
+            // ��算鼠标位置对应的日期
             QCalendarWidget* calendar = ui->calendarWidget;
             
             // 获取日历视图的大小信息
@@ -1397,12 +1397,72 @@ void MainWindow::setupDayView()
     QVBoxLayout* scheduleLayout = new QVBoxLayout(scheduleContainer);
     scheduleLayout->setContentsMargins(15, 15, 15, 15);
 
+    // 日期标题和切换按钮容器
+    QWidget* dateTitleContainer = new QWidget;
+    QHBoxLayout* dateTitleLayout = new QHBoxLayout(dateTitleContainer);
+    dateTitleLayout->setContentsMargins(0, 0, 0, 0);
+    dateTitleLayout->setSpacing(10);
+
+    // 上一天按钮
+    QPushButton* prevDayBtn = new QPushButton;
+    prevDayBtn->setIcon(QIcon(":/img/img/last.png"));
+    prevDayBtn->setIconSize(QSize(16, 16));
+    prevDayBtn->setFixedSize(28, 28);
+    prevDayBtn->setStyleSheet(R"(
+        QPushButton {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 14px;
+            padding: 4px;
+        }
+        QPushButton:hover {
+            background: #f0f0f0;
+        }
+    )");
+
     // 日期标题
     QLabel* dateTitle = new QLabel(currentDate.toString("MM月dd日"));
     dateTitle->setObjectName("dayViewDateTitle");
     dateTitle->setAlignment(Qt::AlignCenter);
-    dateTitle->setStyleSheet("font-size: 24px; font-weight: bold; margin: 10px 0; color: #333333;");  // 深灰色
-    scheduleLayout->addWidget(dateTitle);
+    dateTitle->setStyleSheet("font-size: 24px; font-weight: bold; margin: 10px 0; color: #333333;");
+
+    // 下一天按钮
+    QPushButton* nextDayBtn = new QPushButton;
+    nextDayBtn->setIcon(QIcon(":/img/img/next.png"));
+    nextDayBtn->setIconSize(QSize(16, 16));
+    nextDayBtn->setFixedSize(28, 28);
+    nextDayBtn->setStyleSheet(R"(
+        QPushButton {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 14px;
+            padding: 4px;
+        }
+        QPushButton:hover {
+            background: #f0f0f0;
+        }
+    )");
+
+    // 添加到布局
+    dateTitleLayout->addStretch();
+    dateTitleLayout->addWidget(prevDayBtn);
+    dateTitleLayout->addWidget(dateTitle);
+    dateTitleLayout->addWidget(nextDayBtn);
+    dateTitleLayout->addStretch();
+
+    // 连接按钮信号
+    connect(prevDayBtn, &QPushButton::clicked, [this]() {
+        currentDate = currentDate.addDays(-1);
+        updateDayView();
+    });
+
+    connect(nextDayBtn, &QPushButton::clicked, [this]() {
+        currentDate = currentDate.addDays(1);
+        updateDayView();
+    });
+
+    // 将日期标题容器添加到日程布局中
+    scheduleLayout->addWidget(dateTitleContainer);
 
     // 时间表
     QScrollArea* scrollArea = new QScrollArea;
@@ -1566,7 +1626,7 @@ void MainWindow::setupDayView()
     // 显示日视图
     dayView->show();
 
-    // 更新日视图内容
+    // ���新日视图内容
     QTimer::singleShot(0, this, &MainWindow::updateDayView);
 }
 
@@ -1575,7 +1635,7 @@ void MainWindow::updateDayView()
     if (!dayView || !dayView->isVisible()) return;
 
     try {
-        // 更新日期标��
+        // 更新日期标题
         QLabel* dateTitle = dayView->findChild<QLabel *>("dayViewDateTitle");
         if (dateTitle) {
             dateTitle->setText(currentDate.toString("MM月dd日"));
