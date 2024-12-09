@@ -19,6 +19,7 @@
 #include <QCursor>
 #include <QTimer>
 #include <QDebug>
+#include "idatabase.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui {
@@ -56,6 +57,7 @@ protected:
 
 private:
     struct EventItem {
+        int id;
         QString text;
         QColor color;
         QDateTime startTime;
@@ -63,12 +65,15 @@ private:
         QString description;
 
         bool operator==(const EventItem& other) const {
-            return text == other.text &&
+            return id == other.id &&
+                   text == other.text &&
                    color == other.color &&
                    startTime == other.startTime &&
                    endTime == other.endTime &&
                    description == other.description;
         }
+        
+        EventItem() : id(-1) {}
     };
 
     Ui::MainWindow *ui;
@@ -79,6 +84,13 @@ private:
     QListWidget *eventListWidget;
     QWidget *dayView = nullptr;  // 添加日视图指针
     QDate currentDate;           // 添加当前日期
+
+    IDatabase* database;
+    
+    void loadEventsFromDatabase();
+    void saveEventToDatabase(const EventItem& event);
+    void updateEventInDatabase(int eventId, const EventItem& event);
+    void deleteEventFromDatabase(int eventId);
 
     void setupWeekView();
     void updateWeekView();
