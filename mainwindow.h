@@ -60,6 +60,14 @@ private:
         QDateTime startTime;
         QDateTime endTime;
         QString description;
+
+        bool operator==(const EventItem& other) const {
+            return text == other.text &&
+                   color == other.color &&
+                   startTime == other.startTime &&
+                   endTime == other.endTime &&
+                   description == other.description;
+        }
     };
 
     Ui::MainWindow *ui;

@@ -7,6 +7,7 @@
 #include <QCalendarWidget>
 #include <QToolButton>
 #include <QTableView>
+#include<QTimeEdit>
 #include<QScrollArea>
 #include "eventdialog.h"
 #include "eventitemdelegate.h"
@@ -233,7 +234,10 @@ MainWindow::~MainWindow()
 void MainWindow::on_action_new_triggered()
 {
     QDate selectedDate;
-    if (weekView && weekView->isVisible()) {
+    if (dayView && dayView->isVisible()) {
+        // 在日视图中，使用当前显示的日期
+        selectedDate = currentDate;
+    } else if (weekView && weekView->isVisible()) {
         // 在周视图中，获取当前选中的日期
         QList<QPushButton *> buttons = weekView->findChildren<QPushButton *>();
         for (int i = 1; i <= 7; ++i) {
@@ -260,50 +264,15 @@ void MainWindow::on_action_new_triggered()
         newEvent.description = dialog.getDescription();
         newEvent.color = dialog.getEventColor();
 
-        // 添加事件映射中
+        // 添加事件到映射中
         QDate eventDate = newEvent.startTime.date();
         eventMap[eventDate].append(newEvent);
 
-        // 更新显示
-        if (weekView && weekView->isVisible()) {
-            // 找到对应的日期按钮并更新其事件指示器
-            QList<QPushButton *> buttons = weekView->findChildren<QPushButton *>();
-            for (int i = 1; i <= 7; ++i) {
-                QDate btnDate = currentWeekStart.addDays(i - 1);
-                if (btnDate == eventDate) {
-                    QPushButton* btn = buttons[i];
-
-                    // 清理旧的指示器
-                    QList<QWidget *> oldWidgets = btn->findChildren<QWidget *>("dotsContainer");
-                    for (QWidget * widget : oldWidgets) {
-                        delete widget;
-                    }
-
-                    // 创建新的事件指示器
-                    QWidget* dotsContainer = new QWidget(btn);
-                    dotsContainer->setObjectName("dotsContainer");
-                    QHBoxLayout* dotsLayout = new QHBoxLayout(dotsContainer);
-                    dotsLayout->setSpacing(2);
-                    dotsLayout->setContentsMargins(0, 0, 0, 0);
-                    dotsLayout->setAlignment(Qt::AlignCenter);
-
-                    // 添加所有事件的指示器
-                    for (const EventItem& event : eventMap[eventDate]) {
-                        QLabel* dot = new QLabel(dotsContainer);
-                        dot->setFixedSize(6, 6);
-                        dot->setStyleSheet(QString("background-color: %1; border-radius: 3px;")
-                                           .arg(event.color.name()));
-                        dotsLayout->addWidget(dot);
-                    }
-
-                    // 设置指示器位置并显示
-                    dotsContainer->setGeometry(0, btn->height() - 15, btn->width(), 12);
-                    dotsContainer->show();
-                    break;
-                }
-            }
-
-            // 更新事件列表
+        // 根据当前视图更新显示
+        if (dayView && dayView->isVisible()) {
+            updateDayView();
+        } else if (weekView && weekView->isVisible()) {
+            updateWeekView();
             updateWeekEvents(selectedDate);
         } else {
             updateEventList();
@@ -336,7 +305,7 @@ void MainWindow::on_action_day_view_triggered()
 
     // 创建日视图
     setupDayView();
-    
+
     // 更新状态栏
     statusBar()->showMessage(tr("切换到日视图"), 2000);
 }
@@ -371,7 +340,7 @@ void MainWindow::on_action_month_view_triggered()
     // 显示月视图（日历控件）和右侧部件
     ui->calendarWidget->show();
     ui->rightWidget->show();
-    
+
     // 更新月视图的事件显示
     updateEventList();
 
@@ -433,7 +402,7 @@ void MainWindow::updateEventList()
         QDate date(firstOfMonth.year(), firstOfMonth.month(), day);
         if (eventMap.contains(date)) {
             // 计算日期在表格中的行列位置
-            int firstDayOffset = firstOfMonth.dayOfWeek() - 1;  // 月初的偏移量（0=周一）
+            int firstDayOffset = firstOfMonth.dayOfWeek() - 1;  // 月初的偏移（0=周一）
             int totalDays = day + firstDayOffset - 1;  // 从月初开始的总天数
             int row = totalDays / 7;  // 行号
             int col = totalDays % 7;  // 列号
@@ -460,7 +429,7 @@ void MainWindow::updateEventList()
             }
 
             // 设置指示器位置（在日期下方）
-            int dotsHeight = 6;  // 圆点容器的高度
+            int dotsHeight = 6;  // 圆容器的高度
             dotsContainer->setFixedSize(cellRect.width(), dotsHeight);
 
             // 将指示器位置移到单元格底部，但稍微往上一点
@@ -488,7 +457,7 @@ void MainWindow::on_action_edit_triggered()
         // 在周视图中编辑事件
         QListWidgetItem* currentItem = eventListWidget->currentItem();
         if (currentItem) {
-            // 获取当前选���的日期
+            // 获取当前选的日期
             QDate selectedDate;
             QList<QPushButton *> buttons = weekView->findChildren<QPushButton *>();
             for (int i = 1; i <= 7; ++i) {
@@ -521,7 +490,7 @@ void MainWindow::on_action_edit_triggered()
             }
         } else {
             QMessageBox::warning(this, tr("提示"),
-                                 tr("请先选���要编辑的事件"));
+                                 tr("请先选择要编辑的事件"));
         }
     } else {
         // 月视图编辑代码
@@ -562,7 +531,7 @@ void MainWindow::on_action_delete_triggered()
         // 在周视图中删除事件
         QListWidgetItem* currentItem = eventListWidget->currentItem();
         if (currentItem) {
-            // 获取当前选中的日期
+            // 获取当前选的日期
             QDate selectedDate;
             QList<QPushButton *> buttons = weekView->findChildren<QPushButton *>();
             for (int i = 1; i <= 7; ++i) {
@@ -643,7 +612,7 @@ void MainWindow::on_action_delete_triggered()
                 // 从事映射中删除
                 eventMap[selectedDate].removeAt(currentRow);
 
-                // 果该日期没��事件了，从映射中移除
+                // 果该日期没有事件了，从映射中移除
                 if (eventMap[selectedDate].isEmpty()) {
                     eventMap.remove(selectedDate);
                 }
@@ -716,7 +685,7 @@ void MainWindow::setupWeekView()
         buttonGroup->addButton(dayBtn);  // 将按钮添加到按钮组
         connect(dayBtn, &QPushButton::clicked, [this, i]() {
             QDate date = currentWeekStart.addDays(i);
-            // 不再更新隐藏的日历控件
+            // 不再更隐藏日控件
             // ui->calendarWidget->setSelectedDate(date);
             // 直接更新事件列表
             updateWeekEvents(date);
@@ -798,7 +767,7 @@ void MainWindow::setupWeekView()
     // 添加这些行来显示和更新周视图
     weekView->show();
     ui->calendarWidget->hide();
-    ui->rightWidget->hide();  // 隐藏右侧部件
+    ui->rightWidget->hide();  // 藏右侧部件
     updateWeekView();
 }
 
@@ -827,7 +796,7 @@ void MainWindow::updateWeekView()
             delete widget;
         }
 
-        // 设置日期文本
+        // 设置期文本
         btn->setText(QString::number(date.day()));
 
         // 果该日期有事件，加事件指示器
@@ -938,7 +907,7 @@ void MainWindow::updateWeekEvents(const QDate& date)
                 QListWidgetItem* currentItem = eventListWidget->item(i);
                 if (currentItem->data(Qt::UserRole).toInt() == eventIndex) {
                     currentItem->setSelected(true);
-                    // 设置选中状态的背景色
+                    // 设置选中状的背景色
                     QWidget* widget = eventListWidget->itemWidget(currentItem);
                     if (widget) {
                         widget->setStyleSheet("background-color: #f0f0f0;");
@@ -985,13 +954,13 @@ void MainWindow::dropEvent(QDropEvent* event)
     QCalendarWidget* calendar = ui->calendarWidget;
     QPoint pos = calendar->mapFromGlobal(QCursor::pos());
 
-    // 计算鼠标位置对应的日期
+    // ���算鼠标位置对应的日期
     QDate dropDate = calendar->selectedDate();  // 默认使用选中日期
 
     // 尝试根据位置计算日期
     if (calendar->rect().contains(pos)) {
         int row = pos.y() / (calendar->height() / 6);  // 6行
-        int col = pos.x() / (calendar->width() / 7);   // 7列
+        int col = pos.x() / (calendar->width() / 7);   // 7
 
         QDate firstDay = QDate(calendar->selectedDate().year(),
                                calendar->selectedDate().month(), 1);
@@ -1052,55 +1021,26 @@ void MainWindow::handleEventDrop(const QDate& newDate, int eventIndex)
 
 bool MainWindow::eventFilter(QObject *obj, QEvent *event)
 {
-    if (obj == ui->calendarWidget) {
-        if (event->type() == QEvent::DragEnter) {
-            QDragEnterEvent *dragEvent = static_cast<QDragEnterEvent *>(event);
-            dragEvent->acceptProposedAction();
-            return true;
-        } else if (event->type() == QEvent::DragMove) {
-            QDragMoveEvent *moveEvent = static_cast<QDragMoveEvent *>(event);
-            moveEvent->acceptProposedAction();
-            return true;
-        } else if (event->type() == QEvent::Drop) {
-            QDropEvent *dropEvent = static_cast<QDropEvent *>(event);
-            QPoint pos = dropEvent->pos();
-
-            // 计算鼠标位置对应的日期
-            QCalendarWidget* calendar = ui->calendarWidget;
-
-            // 获取日历视图的大小信息
-            int totalHeight = calendar->height();
-            int totalWidth = calendar->width();
-            int headerHeight = totalHeight / 8;  // 估计标题栏高度
-            int cellHeight = (totalHeight - headerHeight) / 6;
-            int cellWidth = totalWidth / 7;
-
-            // 计算行列位置
-            int row = (pos.y() - headerHeight) / cellHeight;
-            int col = pos.x() / cellWidth;
-
-            // 确保行列在有效范围内
-            if (row >= 0 && row < 6 && col >= 0 && col < 7) {
-                // 获取当前显示的月份的第一天
-                QDate firstOfMonth(calendar->yearShown(), calendar->monthShown(), 1);
-
-                // 计算日历第一个格子对应的日期（可能是上个月的日期
-                QDate firstDate = firstOfMonth.addDays(-(firstOfMonth.dayOfWeek() - 1));
-
-                // 计算标日期
-                QDate targetDate = firstDate.addDays(row * 7 + col);
-
-                // 获取原始事件的信息
-                QDate originalDate = calendar->selectedDate();
-                int eventIndex = ui->eventList->currentItem()->data(Qt::UserRole).toInt();
-
-                // 如果日期不同，则移动事件
-                if (targetDate != originalDate) {
-                    handleEventDrop(targetDate, eventIndex);
+    // 处理事件点击
+    if (event->type() == QEvent::MouseButtonPress) {
+        QWidget* widget = qobject_cast<QWidget*>(obj);
+        if (widget && widget->property("eventIndex").isValid()) {
+            int eventIndex = widget->property("eventIndex").toInt();
+            if (eventMap.contains(currentDate) && eventIndex < eventMap[currentDate].size()) {
+                const EventItem& selectedEvent = eventMap[currentDate][eventIndex];
+                
+                // 更新右侧详情显示
+                QListWidget* detailsList = dayView->findChild<QListWidget*>("dayViewDetailsList");
+                if (detailsList) {
+                    detailsList->clear();
+                    QString details = QString("时间：%1-%2\n标题：%3\n描述：%4")
+                                    .arg(selectedEvent.startTime.toString("HH:mm"))
+                                    .arg(selectedEvent.endTime.toString("HH:mm"))
+                                    .arg(selectedEvent.text)
+                                    .arg(selectedEvent.description);
+                    detailsList->addItem(details);
                 }
             }
-
-            dropEvent->acceptProposedAction();
             return true;
         }
     }
@@ -1134,11 +1074,11 @@ void MainWindow::setupDayView()
 
     // 顶部年份和日期选择器
     QHBoxLayout* topLayout = new QHBoxLayout;
-    
+
     // 修改年份标签的显示
     QLabel* yearLabel = new QLabel(QString("%1年").arg(currentDate.year()));
     yearLabel->setStyleSheet("font-size: 18px; font-weight: bold; color: #333333;");  // 深灰色
-    
+
     QPushButton* datePickerBtn = new QPushButton;
     datePickerBtn->setText(currentDate.toString("yyyy-MM-dd"));
     datePickerBtn->setStyleSheet(R"(
@@ -1154,12 +1094,12 @@ void MainWindow::setupDayView()
         }
     )");
 
-    // 日期选择按钮点击事件
+    // 日期择按钮点击事件
     connect(datePickerBtn, &QPushButton::clicked, [this, datePickerBtn]() {
         QCalendarWidget* calendar = new QCalendarWidget(this);
         calendar->setWindowFlags(Qt::Popup);
         calendar->setSelectedDate(currentDate);
-        
+
         // 设置日历选择器的样式
         calendar->setStyleSheet(R"(
             QCalendarWidget {
@@ -1181,23 +1121,23 @@ void MainWindow::setupDayView()
                 color: #666666;
             }
         )");
-        
+
         // 设置位置
         QPoint pos = datePickerBtn->mapToGlobal(QPoint(0, datePickerBtn->height()));
         calendar->move(pos);
-        
+
         // 处理日期选择
-        connect(calendar, &QCalendarWidget::clicked, this, [this, calendar, datePickerBtn](const QDate& date) {
+        connect(calendar, &QCalendarWidget::clicked, this, [this, calendar, datePickerBtn](const QDate & date) {
             currentDate = date;
             datePickerBtn->setText(date.toString("yyyy-MM-dd"));
             updateDayView();
             calendar->close();
             calendar->deleteLater();
         });
-        
+
         calendar->show();
     });
-    
+
     topLayout->addWidget(yearLabel);
     topLayout->addWidget(datePickerBtn);
     topLayout->addStretch();
@@ -1224,8 +1164,53 @@ void MainWindow::setupDayView()
     // 时间表
     QScrollArea* scrollArea = new QScrollArea;
     scrollArea->setWidgetResizable(true);
-    scrollArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-    scrollArea->setStyleSheet("QScrollArea { border: none; }");
+    scrollArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOn);  // 始终显示水平滚动条
+    scrollArea->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+    scrollArea->setStyleSheet(R"(
+        QScrollArea { 
+            border: none; 
+        }
+        QScrollBar:horizontal {
+            height: 12px;
+            background: white;
+            margin: 0px;
+            border: none;
+        }
+        QScrollBar::handle:horizontal {
+            background: #cdcdcd;
+            min-width: 20px;
+        }
+        QScrollBar::add-line:horizontal {
+            width: 0px;
+            border: none;
+            background: none;
+        }
+        QScrollBar::sub-line:horizontal {
+            width: 0px;
+            border: none;
+            background: none;
+        }
+        QScrollBar:vertical {
+            width: 12px;
+            background: white;
+            margin: 0px;
+            border: none;
+        }
+        QScrollBar::handle:vertical {
+            background: #cdcdcd;
+            min-height: 20px;
+        }
+        QScrollBar::add-line:vertical {
+            height: 0px;
+            border: none;
+            background: none;
+        }
+        QScrollBar::sub-line:vertical {
+            height: 0px;
+            border: none;
+            background: none;
+        }
+    )");
 
     QWidget* timeTableWidget = new QWidget;
     QVBoxLayout* timeTableLayout = new QVBoxLayout(timeTableWidget);
@@ -1235,30 +1220,54 @@ void MainWindow::setupDayView()
     // 添加时间段
     for (int hour = 0; hour < 24; hour += 2) {
         QWidget* timeSlot = new QWidget;
-        timeSlot->setStyleSheet("QWidget { border-bottom: 1px solid #eee; }");
-        timeSlot->setFixedHeight(80);  // 设置固定高度为80像素（原来大约是40像素）
+        timeSlot->setStyleSheet(R"(
+            QWidget { 
+                border-bottom: 1px solid #eee;
+                background-color: white;
+            }
+        )");
+        timeSlot->setFixedHeight(80);
         QHBoxLayout* slotLayout = new QHBoxLayout(timeSlot);
-        slotLayout->setContentsMargins(0, 10, 0, 10);  // 增加上下边距
+        slotLayout->setContentsMargins(0, 0, 0, 0);
+        slotLayout->setSpacing(0);
 
         // 时间标签
-        QString timeText = QString("%1:00 ~ %2:00")
-                            .arg(hour, 2, 10, QChar('0'))
-                            .arg(hour + 2, 2, 10, QChar('0'));
-        QLabel* timeLabel = new QLabel(timeText);
-        timeLabel->setFixedWidth(100);
-        timeLabel->setStyleSheet("color: #666; padding: 5px;");
-        timeLabel->setAlignment(Qt::AlignVCenter | Qt::AlignHCenter);  // 改为垂直居中对齐
-
-        // 事件容器
-        QWidget* eventsContainer = new QWidget;
-        eventsContainer->setProperty("timeSlot", hour);
-        QHBoxLayout* eventsLayout = new QHBoxLayout(eventsContainer);
-        eventsLayout->setContentsMargins(10, 0, 0, 0);
-        eventsLayout->setSpacing(10);
-        eventsLayout->setAlignment(Qt::AlignTop | Qt::AlignLeft);  // 将事件靠上对齐
+        QLabel* timeLabel = new QLabel;
+        QString timeText;
+        if (hour == 22) {
+            // 特殊处理22:00~24:00的情况
+            timeText = QString("%1 ~ %2")
+                        .arg(QTime(22, 0).toString("HH:mm"))
+                        .arg(QTime(0, 0).toString("24:00"));  // 使用24:00而不是00:00
+        } else {
+            timeText = QString("%1 ~ %2")
+                        .arg(QTime(hour, 0).toString("HH:mm"))
+                        .arg(QTime(hour + 2, 0).toString("HH:mm"));
+        }
+        timeLabel->setText(timeText);
+        timeLabel->setFixedWidth(120);
+        timeLabel->setStyleSheet(R"(
+            QLabel { 
+                color: #666;
+                padding: 5px;
+                border-right: 1px solid #eee;
+                background: white;
+            }
+        )");
+        timeLabel->setAlignment(Qt::AlignVCenter | Qt::AlignHCenter);
 
         slotLayout->addWidget(timeLabel);
-        slotLayout->addWidget(eventsContainer, 1);
+
+        // 事件容器（作为表格单元格）
+        QWidget* eventCell = new QWidget;
+        eventCell->setProperty("timeSlot", hour);
+        eventCell->setStyleSheet("background-color: white;");
+        QHBoxLayout* cellLayout = new QHBoxLayout(eventCell);
+        cellLayout->setContentsMargins(10, 5, 10, 5);
+        cellLayout->setSpacing(10);
+        cellLayout->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+
+        slotLayout->addWidget(eventCell, 1);  // 事件单元格占据剩余空间
         timeTableLayout->addWidget(timeSlot);
     }
 
@@ -1306,7 +1315,7 @@ void MainWindow::setupDayView()
     dayView->setParent(centralWidget());
     dayView->setGeometry(centralWidget()->rect());
 
-    // 隐藏其他视图
+    // 隐藏其他图
     ui->calendarWidget->hide();
     ui->rightWidget->hide();
     if (weekView) weekView->hide();
@@ -1324,109 +1333,103 @@ void MainWindow::updateDayView()
 
     try {
         // 更新日期标题
-        QLabel* dateTitle = dayView->findChild<QLabel*>("dayViewDateTitle");  // 使用对象名查找
+        QLabel* dateTitle = dayView->findChild<QLabel*>("dayViewDateTitle");
         if (dateTitle) {
             dateTitle->setText(currentDate.toString("MM月dd日"));
         }
 
-        // 清理所有时间段的事件显示
-        QList<QWidget*> timeSlots = dayView->findChildren<QWidget*>();
-        for (QWidget* slot : timeSlots) {
-            if (!slot) continue;  // 查部件是否有效
-            
-            if (slot->property("timeSlot").isValid()) {
-                QHBoxLayout* layout = qobject_cast<QHBoxLayout*>(slot->layout());
-                if (!layout) continue;  // 检查布局是否效
+        // 获取所有时间段容器
+        QScrollArea* scrollArea = dayView->findChild<QScrollArea*>();
+        if (!scrollArea || !scrollArea->widget()) return;
 
-                QLayoutItem* item = layout->itemAt(1);
-                if (!item) continue;  // 检查布局项是否有效
-
-                QWidget* eventsContainer = item->widget();
-                if (!eventsContainer) continue;  // 检查容器是否有效
-
-                // 清理事件容器中的所有部件
-                QLayout* eventsLayout = eventsContainer->layout();
-                if (!eventsLayout) continue;  // 检查布局是否有效
-
-                while (QLayoutItem* item = eventsLayout->takeAt(0)) {
-                    if (item->widget()) {
-                        item->widget()->deleteLater();  // 使用deleteLater代替直接delete
-                    }
-                    delete item;
-                }
+        // 获取所有带有 timeSlot 属性的部件
+        QList<QWidget*> timeSlots;
+        foreach(QWidget* widget, scrollArea->widget()->findChildren<QWidget*>()) {
+            if (widget->property("timeSlot").isValid()) {
+                timeSlots.append(widget);
             }
         }
 
-        // 更新事件显示
+        // 清理现有事件显示
+        for (QWidget* slot : timeSlots) {
+            // 修改这里：先将parent()转换为QWidget
+            QWidget* parentWidget = qobject_cast<QWidget*>(slot->parent());
+            if (!parentWidget) continue;
+
+            QHBoxLayout* slotLayout = qobject_cast<QHBoxLayout*>(parentWidget->layout());
+            if (!slotLayout || slotLayout->count() < 2) continue;
+
+            QWidget* eventCell = slotLayout->itemAt(1)->widget();
+            if (!eventCell) continue;
+
+            QHBoxLayout* cellLayout = qobject_cast<QHBoxLayout*>(eventCell->layout());
+            if (!cellLayout) continue;
+
+            // 清理现有事件
+            while (cellLayout->count() > 0) {
+                QLayoutItem* item = cellLayout->takeAt(0);
+                if (item->widget()) {
+                    item->widget()->deleteLater();
+                }
+                delete item;
+            }
+        }
+
+        // 添加事件到对应时间段
         if (eventMap.contains(currentDate)) {
             const QList<EventItem>& events = eventMap[currentDate];
             for (const EventItem& event : events) {
-                // 获取事件的时间段
                 int startHour = event.startTime.time().hour();
-                int endHour = event.endTime.time().hour();
 
-                // 找到对应的时间段容器
+                // 找到对应的时间段
                 for (QWidget* slot : timeSlots) {
                     int slotHour = slot->property("timeSlot").toInt();
                     if (slotHour <= startHour && slotHour + 2 > startHour) {
+                        QHBoxLayout* slotLayout = qobject_cast<QHBoxLayout*>(slot->layout());
+                        if (!slotLayout) continue;
+
                         // 创建事件显示部件
                         QWidget* eventWidget = new QWidget;
+                        eventWidget->setFixedSize(150, 40);
                         eventWidget->setStyleSheet(QString(R"(
                             QWidget {
                                 background: %1;
                                 border-radius: 4px;
-                                padding: 4px;
+                                margin: 2px;
+                                border: 1px solid %2;
                             }
-                        )").arg(event.color.lighter(150).name()));
+                            QLabel {
+                                border: none;
+                            }
+                        )").arg(event.color.name())
+                          .arg(event.color.darker(120).name()));
 
-                        QVBoxLayout* eventLayout = new QVBoxLayout(eventWidget);
-                        eventLayout->setContentsMargins(6, 6, 6, 6);
-                        eventLayout->setSpacing(2);
+                        QVBoxLayout* eventItemLayout = new QVBoxLayout(eventWidget);  // 修改变量名
+                        eventItemLayout->setContentsMargins(4, 2, 4, 2);
+                        eventItemLayout->setSpacing(0);
 
                         // 添加时间标签
                         QLabel* timeLabel = new QLabel(QString("%1-%2")
-                                                       .arg(event.startTime.toString("HH:mm"))
-                                                       .arg(event.endTime.toString("HH:mm")));
-                        timeLabel->setStyleSheet("background: transparent; color: #666;");
-                        eventLayout->addWidget(timeLabel);
+                                           .arg(event.startTime.toString("HH:mm"))
+                                           .arg(event.endTime.toString("HH:mm")));
+                        timeLabel->setStyleSheet("background: transparent; color: white; font-size: 10px;");
+                        timeLabel->setAlignment(Qt::AlignLeft);
+                        eventItemLayout->addWidget(timeLabel);  // 使用正确的变量名
 
                         // 添加标题标签
                         QLabel* titleLabel = new QLabel(event.text);
-                        titleLabel->setStyleSheet("background: transparent; font-weight: bold;");
-                        eventLayout->addWidget(titleLabel);
+                        titleLabel->setStyleSheet("background: transparent; color: white; font-weight: bold; font-size: 11px;");
+                        titleLabel->setAlignment(Qt::AlignLeft);
+                        eventItemLayout->addWidget(titleLabel);  // 使用正确的变量名
 
-                        // 将事件部件添加到时间段容器
-                        QHBoxLayout* layout = qobject_cast<QHBoxLayout*>(slot->layout());
-                        if (layout) {
-                            QWidget* eventsContainer = layout->itemAt(1)->widget();
-                            if (eventsContainer) {
-                                QHBoxLayout* eventsLayout = qobject_cast<QHBoxLayout*>(eventsContainer->layout());
-                                if (eventsLayout) {
-                                    eventsLayout->addWidget(eventWidget);
-                                }
-                            }
-                        }
+                        // 将事件添加到布局中
+                        slotLayout->addWidget(eventWidget);
+
+                        // 更新容器宽度
+                        int totalWidth = (slotLayout->count() * (150 + 10)) + 20;  // 事件宽度 + 间距
+                        slot->setMinimumWidth(qMax(500, totalWidth));  // 保持最小宽度
+
                         break;
-                    }
-                }
-            }
-
-            // 更新右侧详情列表
-            QListWidget* detailsList = dayView->findChild<QListWidget*>("dayViewDetailsList");
-            if (detailsList) {
-                detailsList->clear();
-                if (eventMap.contains(currentDate)) {
-                    const QList<EventItem>& events = eventMap[currentDate];
-                    for (const EventItem& event : events) {
-                        QListWidgetItem* item = new QListWidgetItem;
-                        if (!item) continue;  // 查项目是否创建成功
-
-                        item->setText(QString("%1-%2 %3")
-                            .arg(event.startTime.toString("HH:mm"))
-                            .arg(event.endTime.toString("HH:mm"))
-                            .arg(event.text));
-                        item->setBackground(event.color.lighter(180));
-                        detailsList->addItem(item);
                     }
                 }
             }
