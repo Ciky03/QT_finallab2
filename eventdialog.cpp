@@ -6,7 +6,7 @@
 EventDialog::EventDialog(QWidget *parent) :
     QDialog(parent),
     ui(new Ui::EventDialog),
-    eventColor(Qt::blue)  // 默认蓝色
+    eventColor(QColor(135, 206, 250))  // 修改默认颜色为浅蓝色
 {
     ui->setupUi(this);
 
@@ -18,6 +18,66 @@ EventDialog::EventDialog(QWidget *parent) :
     QDateTime currentTime = QDateTime::currentDateTime();
     ui->startDateTimeEdit->setDateTime(currentTime);
     ui->endDateTimeEdit->setDateTime(currentTime.addSecs(3600));
+
+    // 设置对话框样式
+    setStyleSheet(R"(
+        QDialog {
+            background-color: white;
+        }
+        QLabel {
+            color: black;
+        }
+        QLineEdit, QTextEdit, QDateTimeEdit {
+            background-color: white;
+            color: black;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 4px;
+        }
+        QLineEdit:focus, QTextEdit:focus, QDateTimeEdit:focus {
+            border-color: #007bff;
+        }
+        QPushButton {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 6px 12px;
+            min-width: 80px;
+        }
+        QPushButton:hover {
+            background-color: #0056b3;
+        }
+        QPushButton#colorButton {
+            margin: 4px;
+            min-height: 32px;  /* 增加按钮高度 */
+        }
+        QDialogButtonBox QPushButton {
+            min-width: 60px;
+        }
+        /* 日期时间编辑器的下拉按钮样式 */
+        QDateTimeEdit::down-button, QDateTimeEdit::up-button {
+            border: none;
+            background-color: transparent;
+        }
+        QDateTimeEdit::down-button:hover, QDateTimeEdit::up-button:hover {
+            background-color: #f0f0f0;
+        }
+        /* 文本框的滚动条样式 */
+        QTextEdit QScrollBar:vertical {
+            width: 12px;
+            background: white;
+        }
+        QTextEdit QScrollBar::handle:vertical {
+            background: #cdcdcd;
+            border-radius: 6px;
+            min-height: 20px;
+        }
+        QTextEdit QScrollBar::add-line:vertical,
+        QTextEdit QScrollBar::sub-line:vertical {
+            height: 0px;
+        }
+    )");
 
     // 更新颜色按钮的显示
     updateColorButton();
@@ -85,8 +145,24 @@ void EventDialog::on_colorButton_clicked()
 void EventDialog::updateColorButton()
 {
     // 设置按钮的背景色和文字颜色
-    QString style = QString("QPushButton { background-color: %1; color: %2; }")
-                       .arg(eventColor.name())
-                       .arg(eventColor.value() < 128 ? "white" : "black");
+    QString style = QString(R"(
+        QPushButton {
+            background-color: %1;
+            color: %2;
+            border: 1px solid %3;
+            border-radius: 4px;
+            padding: 6px 12px;
+            min-height: 32px;  /* 增加按钮高度 */
+            font-size: 12px;   /* 调整字体大小 */
+        }
+        QPushButton:hover {
+            background-color: %4;
+        }
+    )")
+        .arg(eventColor.name())
+        .arg(eventColor.value() < 128 ? "white" : "black")
+        .arg(eventColor.darker(120).name())
+        .arg(eventColor.lighter(110).name());
+    
     ui->colorButton->setStyleSheet(style);
 } 
