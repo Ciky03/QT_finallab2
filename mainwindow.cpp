@@ -256,6 +256,9 @@ MainWindow::MainWindow(QWidget *parent)
 
     // 设置提醒系统
     setupReminderSystem();
+
+    // 设置工具栏按钮样式，显示图标下方的文字
+    ui->mainToolBar->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
 }
 
 MainWindow::~MainWindow()
@@ -913,7 +916,7 @@ void MainWindow::updateWeekView()
             // 设置日期文本
             btn->setText(QString::number(date.day()));
 
-            // 如果该日期有事件，添加事件指示器
+            // 如果该日期有事件，添加件指示器
             if (eventMap.contains(date)) {
                 QWidget* dotsContainer = new QWidget(btn);
                 dotsContainer->setObjectName("dotsContainer");
@@ -959,7 +962,7 @@ void MainWindow::updateWeekEvents(const QDate& date)
     eventListWidget->setSelectionMode(QAbstractItemView::SingleSelection);  // 确保单选模式
 
     if (eventMap.contains(date)) {
-        int eventIndex = 0;  // 用于跟踪事��索引
+        int eventIndex = 0;  // 用于跟踪事件索引
         for (const EventItem& event : eventMap[date]) {
             // 为每个事件创建一个容器widget
             QWidget* eventWidget = new QWidget;
@@ -1127,7 +1130,7 @@ void MainWindow::handleEventDrop(const QDate& newDate, int eventIndex)
     // 更新数据库
     updateEventInDatabase(event.id, event);
 
-    // 从旧日期移除事件
+    // ���旧日期移除事件
     eventMap[oldDate].removeAt(eventIndex);
     if (eventMap[oldDate].isEmpty()) {
         eventMap.remove(oldDate);
@@ -1228,7 +1231,7 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
                                         detailsList->clear();
                                         // ... (其余显示代码保持不变)
 
-                                        // 创建情显示部件
+                                        // 创建��显示部件
                                         QWidget* detailWidget = new QWidget;
                                         QVBoxLayout* detailLayout = new QVBoxLayout(detailWidget);
                                         detailLayout->setSpacing(15);
@@ -1353,6 +1356,55 @@ void MainWindow::setupDayView()
             background: #f0f0f0;
         }
     )");
+
+    // 添加点击事件处理
+    connect(datePickerBtn, &QPushButton::clicked, [this, datePickerBtn]() {
+        QCalendarWidget* calendar = new QCalendarWidget(this);
+        calendar->setWindowFlags(Qt::Popup);
+        calendar->setSelectedDate(currentDate);
+
+        // 设置日历选择器的样式
+        calendar->setStyleSheet(R"(
+            QCalendarWidget {
+                background-color: white;
+                color: black;
+            }
+            QCalendarWidget QTableView {
+                selection-background-color: #007bff;
+                selection-color: white;
+            }
+            QCalendarWidget QWidget#qt_calendar_navigationbar {
+                background-color: #007bff;
+            }
+            QCalendarWidget QToolButton {
+                color: white;
+                background-color: transparent;
+            }
+            QCalendarWidget QMenu {
+                color: black;
+            }
+            QCalendarWidget QSpinBox {
+                color: white;
+                background-color: transparent;
+            }
+        )");
+
+        // 设置位置
+        QPoint pos = datePickerBtn->mapToGlobal(QPoint(0, datePickerBtn->height()));
+        calendar->move(pos);
+
+        // 处理日期选择
+        connect(calendar, &QCalendarWidget::clicked, this, [this, calendar, datePickerBtn](const QDate &date) {
+            currentDate = date;
+            datePickerBtn->setText(date.toString("yyyy-MM-dd"));
+            updateDayView();  // 更新日视图显示
+            calendar->close();
+            calendar->deleteLater();
+        });
+
+        calendar->show();
+    });
+
     topLayout->addWidget(datePickerBtn);
 
     leftLayout->addLayout(topLayout);
@@ -1595,7 +1647,7 @@ void MainWindow::setupDayView()
     ui->rightWidget->hide();
     if (weekView) weekView->hide();
 
-    // 显示日视图
+    // 显日视图
     dayView->show();
 
     // 新日视图内容
@@ -1736,7 +1788,7 @@ void MainWindow::onEventItemDoubleClicked(QListWidgetItem* item)
 
         // 标题行（颜色圆圈 + 标题）
         QWidget* titleWidget = new QWidget;
-        titleWidget->setStyleSheet("background: transparent;");  // 设置背景透明
+        titleWidget->setStyleSheet("background: transparent;");  // ��置背景透明
         QHBoxLayout* titleLayout = new QHBoxLayout(titleWidget);
 
         // 颜色圆圈
