@@ -12,12 +12,15 @@
 #include "eventdialog.h"
 #include "eventitemdelegate.h"
 #include "idatabase.h"
+#include <QTimer>
+#include <QSystemTrayIcon>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
     , trayIcon(new QSystemTrayIcon(this))
     , database(new IDatabase(this))
+    , reminderTimer(new QTimer(this))
 {
     ui->setupUi(this);
 
@@ -158,7 +161,7 @@ MainWindow::MainWindow(QWidget *parent)
     ui->calendarWidget->setNavigationBarVisible(true);
     ui->calendarWidget->setGridVisible(true);
 
-    // 设置日历导航按钮的式
+    // 设置日历导航按钮的���
     QToolButton* prevMonth = ui->calendarWidget->findChild<QToolButton *>("qt_calendar_prevmonth");
     QToolButton* nextMonth = ui->calendarWidget->findChild<QToolButton *>("qt_calendar_nextmonth");
 
@@ -231,12 +234,15 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->eventList, &QListWidget::itemDoubleClicked,
             this, &MainWindow::onEventItemDoubleClicked);
 
-    // 初始化数据库并加载事件
+    // 初始化数据库并加载事��
     if (!database->initDatabase()) {
         QMessageBox::warning(this, tr("错误"), tr("数据库初始化失败"));
     } else {
         loadEventsFromDatabase();
     }
+
+    // 设置提醒系统
+    setupReminderSystem();
 }
 
 MainWindow::~MainWindow()
@@ -281,7 +287,7 @@ void MainWindow::on_action_new_triggered()
         int newId = saveEventToDatabase(newEvent);
         if (newId > 0) {
             newEvent.id = newId;  // 设置事件ID
-            
+
             // 添加事件到映射中
             QDate eventDate = newEvent.startTime.date();
             eventMap[eventDate].append(newEvent);
@@ -566,7 +572,7 @@ void MainWindow::on_action_edit_triggered()
 
         QDate selectedDate = ui->calendarWidget->selectedDate();
         int currentRow = ui->eventList->row(currentItem);
-        
+
         if (eventMap.contains(selectedDate) && currentRow < eventMap[selectedDate].size()) {
             EventItem& event = eventMap[selectedDate][currentRow];
             EventDialog dialog(this);
@@ -620,10 +626,10 @@ void MainWindow::on_action_delete_triggered()
         for (int i = 0; i < events.size(); ++i) {
             if (events[i].text == eventTitle) {
                 if (QMessageBox::question(this, tr("确认删除"),
-                                          tr("是否确定删除事���：%1？").arg(eventTitle)) == QMessageBox::Yes) {
+                                          tr("是否确定删除事：%1？").arg(eventTitle)) == QMessageBox::Yes) {
                     // 从数据库中删除
                     deleteEventFromDatabase(events[i].id);
-                    
+
                     // 从内存中删除
                     events.removeAt(i);
                     if (events.isEmpty()) {
@@ -659,7 +665,7 @@ void MainWindow::on_action_delete_triggered()
                                       tr("是否确定删除事件：%1？").arg(eventText)) == QMessageBox::Yes) {
                 // 从数据库中删除
                 deleteEventFromDatabase(eventMap[selectedDate][eventIndex].id);
-                
+
                 // 从内存中删除
                 eventMap[selectedDate].removeAt(eventIndex);
                 if (eventMap[selectedDate].isEmpty()) {
@@ -683,9 +689,9 @@ void MainWindow::on_action_delete_triggered()
 
         if (QMessageBox::question(this, tr("确认删除"),
                                   tr("是否确定删除事件：%1？").arg(eventText)) == QMessageBox::Yes) {
-            // 从数据库中删除
+            // 从数��库中删除
             deleteEventFromDatabase(eventMap[selectedDate][currentRow].id);
-            
+
             // 从内存中删除
             eventMap[selectedDate].removeAt(currentRow);
             if (eventMap[selectedDate].isEmpty()) {
@@ -949,7 +955,7 @@ void MainWindow::updateWeekEvents(const QDate& date)
             QLabel* titleLabel = new QLabel;
             QString timeText = QString("%1 - %2")
                                .arg(event.startTime.toString("HH:mm"))
-                                   .arg(event.endTime.toString("HH:mm"));
+                               .arg(event.endTime.toString("HH:mm"));
             titleLabel->setStyleSheet("color: #666666; font-size: 14px; background: transparent;");
             titleLabel->setText(timeText + " " + event.text);
             titleLabel->setMinimumHeight(30);
@@ -1110,64 +1116,61 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
 {
     if (obj == ui->calendarWidget) {
         if (event->type() == QEvent::DragEnter) {
-            QDragEnterEvent *dragEvent = static_cast<QDragEnterEvent*>(event);
+            QDragEnterEvent *dragEvent = static_cast<QDragEnterEvent *>(event);
             dragEvent->acceptProposedAction();
             return true;
-        }
-        else if (event->type() == QEvent::DragMove) {
-            QDragMoveEvent *moveEvent = static_cast<QDragMoveEvent*>(event);
+        } else if (event->type() == QEvent::DragMove) {
+            QDragMoveEvent *moveEvent = static_cast<QDragMoveEvent *>(event);
             moveEvent->acceptProposedAction();
             return true;
-        }
-        else if (event->type() == QEvent::Drop) {
-            QDropEvent *dropEvent = static_cast<QDropEvent*>(event);
+        } else if (event->type() == QEvent::Drop) {
+            QDropEvent *dropEvent = static_cast<QDropEvent *>(event);
             QPoint pos = dropEvent->pos();
-            
+
             // 算鼠标位置对应的日期
             QCalendarWidget* calendar = ui->calendarWidget;
-            
+
             // 获取日历视图的大小信息
             int totalHeight = calendar->height();
             int totalWidth = calendar->width();
             int headerHeight = totalHeight / 8;  // 估计标题栏高度
             int cellHeight = (totalHeight - headerHeight) / 6;
             int cellWidth = totalWidth / 7;
-            
+
             // 计算行列位置
             int row = (pos.y() - headerHeight) / cellHeight;
             int col = pos.x() / cellWidth;
-            
+
             // 确保行列在有效范围内
             if (row >= 0 && row < 6 && col >= 0 && col < 7) {
                 // 获取当前显示的月份的第一天
                 QDate firstOfMonth(calendar->yearShown(), calendar->monthShown(), 1);
-                
+
                 // 计算日历第一个格子对应的日期（可能是上个月的日期）
                 QDate firstDate = firstOfMonth.addDays(-(firstOfMonth.dayOfWeek() - 1));
-                
+
                 // 计算目标日期
                 QDate targetDate = firstDate.addDays(row * 7 + col);
-                
-                // 获取原始事件的信���
+
+                // 获取原始事件的信息
                 QDate originalDate = calendar->selectedDate();
                 int eventIndex = ui->eventList->currentItem()->data(Qt::UserRole).toInt();
-                
+
                 // 如果日期不同，则移动事件
                 if (targetDate != originalDate) {
                     handleEventDrop(targetDate, eventIndex);
                 }
             }
-            
+
             dropEvent->acceptProposedAction();
             return true;
         }
-    }
-    else if (dayView && dayView->isVisible()) {
+    } else if (dayView && dayView->isVisible()) {
         // 处理日视图的事件点击
         if (event->type() == QEvent::MouseButtonPress) {
-            QWidget* widget = qobject_cast<QWidget*>(obj);
+            QWidget* widget = qobject_cast<QWidget *>(obj);
             if (widget && widget->parent()) {
-                QWidget* parentWidget = qobject_cast<QWidget*>(widget->parent());
+                QWidget* parentWidget = qobject_cast<QWidget *>(widget->parent());
                 if (parentWidget && parentWidget->property("timeSlot").isValid()) {
                     int slotHour = parentWidget->property("timeSlot").toInt();
 
@@ -1431,7 +1434,7 @@ void MainWindow::setupDayView()
     dateTitleLayout->addWidget(nextDayBtn);
     dateTitleLayout->addStretch();
 
-    // 连接��钮信号
+    // 连接钮信号
     connect(prevDayBtn, &QPushButton::clicked, [this]() {
         currentDate = currentDate.addDays(-1);
         updateDayView();
@@ -1593,7 +1596,7 @@ void MainWindow::setupDayView()
     )");
     rightLayout->addWidget(detailsList);
 
-    mainLayout->addWidget(rightWidget, 1);  // 右侧��1份
+    mainLayout->addWidget(rightWidget, 1);  // 右侧1份
 
     // 设置日视图位置
     dayView->setParent(centralWidget());
@@ -1636,7 +1639,7 @@ void MainWindow::updateDayView()
 
         // 清理现有事件显示
         for (QWidget * slot : timeSlots) {
-            // 修改这里：先将parent()转换为QWidget
+            // 修改��里：先将parent()转换为QWidget
             QWidget* parentWidget = qobject_cast<QWidget *>(slot->parent());
             if (!parentWidget) continue;
 
@@ -1813,18 +1816,18 @@ void MainWindow::loadEventsFromDatabase()
 {
     // 清空现有事件
     eventMap.clear();
-    
+
     // 获取当前显示月份的所有事件
     QDate firstDay(ui->calendarWidget->yearShown(), ui->calendarWidget->monthShown(), 1);
     QDate lastDay = firstDay.addMonths(1).addDays(-1);
-    
+
     auto events = database->getEventsByDateRange(firstDay, lastDay);
-    
+
     // 将事件添加到 eventMap
     for (const auto& pair : events) {
         int id = pair.first;
         const QVariantMap& eventData = pair.second;
-        
+
         EventItem event;
         event.id = id;  // 保存事件ID
         event.text = eventData["title"].toString();
@@ -1832,10 +1835,10 @@ void MainWindow::loadEventsFromDatabase()
         event.endTime = eventData["end_time"].toDateTime();
         event.description = eventData["description"].toString();
         event.color = eventData["color"].value<QColor>();
-        
+
         eventMap[event.startTime.date()].append(event);
     }
-    
+
     // 更新显示
     updateEventList();
 }
@@ -1843,30 +1846,39 @@ void MainWindow::loadEventsFromDatabase()
 int MainWindow::saveEventToDatabase(const EventItem& event)
 {
     int newId = database->addEvent(
-        event.text,
-        event.startTime,
-        event.endTime,
-        event.description,
-        event.color
-    );
-    
-    if (newId <= 0) {
+                    event.text,
+                    event.startTime,
+                    event.endTime,
+                    event.description,
+                    event.color
+                );
+
+    if (newId > 0) {
+        // 立即检查是否需要提醒
+        QDateTime currentDateTime = QDateTime::currentDateTime();
+        QDateTime checkTime = currentDateTime.addSecs(300);  // 检查未来5分钟
+
+        if (event.startTime > currentDateTime && event.startTime <= checkTime) {
+            showEventReminder(event);
+        }
+    } else {
         QMessageBox::warning(this, tr("错误"), tr("保存事件失败"));
     }
+
     return newId;
 }
 
 void MainWindow::updateEventInDatabase(int eventId, const EventItem& event)
 {
     bool success = database->updateEvent(
-        eventId,
-        event.text,
-        event.startTime,
-        event.endTime,
-        event.description,
-        event.color
-    );
-    
+                       eventId,
+                       event.text,
+                       event.startTime,
+                       event.endTime,
+                       event.description,
+                       event.color
+                   );
+
     if (!success) {
         QMessageBox::warning(this, tr("错误"), tr("更新事件失败"));
     }
@@ -1875,9 +1887,63 @@ void MainWindow::updateEventInDatabase(int eventId, const EventItem& event)
 void MainWindow::deleteEventFromDatabase(int eventId)
 {
     bool success = database->deleteEvent(eventId);
-    
+
     if (!success) {
         QMessageBox::warning(this, tr("错误"), tr("删除事件失败"));
     }
+}
+
+void MainWindow::setupReminderSystem()
+{
+    // 连接定时器信号
+    connect(reminderTimer, &QTimer::timeout, this, &MainWindow::checkUpcomingEvents);
+
+    // 启动定时器
+    reminderTimer->start(CHECK_INTERVAL);
+
+    // 确保系统托盘图标支持消息气泡
+    trayIcon->setIcon(QIcon(":/img/img/about.png"));  // 使用合适的图标
+    trayIcon->show();
+}
+
+void MainWindow::checkUpcomingEvents()
+{
+    QDateTime currentDateTime = QDateTime::currentDateTime();
+    QDateTime checkTime = currentDateTime.addSecs(300);  // 检查未来5分钟内的事件
+
+    // 遍历所有事件
+    for (const auto& events : eventMap) {
+        for (const EventItem& event : events) {
+            // 如果事件在未来5分钟内开始
+            if (event.startTime > currentDateTime && event.startTime <= checkTime) {
+                // 显示提醒
+                showEventReminder(event);
+            }
+        }
+    }
+}
+
+void MainWindow::showEventReminder(const EventItem& event)
+{
+    // 计算事件还有多少分钟开始
+    int minutesToStart = QDateTime::currentDateTime().secsTo(event.startTime) / 60;
+
+    // 构建提醒消息
+    QString reminderTitle = tr("事件提醒");
+    QString reminderMessage = tr("事件%1将在%2分钟后开始\n时间：%3")
+                              .arg(event.text)
+                              .arg(minutesToStart)
+                              .arg(event.startTime.toString("HH:mm"));
+
+    // 显示系统托盘通知
+    trayIcon->showMessage(
+        reminderTitle,
+        reminderMessage,
+        QSystemTrayIcon::Information,
+        10000  // 显示10秒
+    );
+
+    // 同时发出提示音
+    QApplication::beep();
 }
 

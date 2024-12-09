@@ -100,5 +100,12 @@ private:
     void setupDayView();         // 设置日视图
     void updateDayView();        // 更新日视图
     void updateDayEvents();      // 更新日视图事件
+
+    QTimer* reminderTimer;  // 用于定时检查事件
+    const int CHECK_INTERVAL = 60000;  // 检查间隔(毫秒),这里设置为1分钟
+    
+    void setupReminderSystem();
+    void checkUpcomingEvents();
+    void showEventReminder(const EventItem& event);
 };
 #endif // MAINWINDOW_H
