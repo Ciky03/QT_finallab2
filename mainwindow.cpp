@@ -685,7 +685,7 @@ void MainWindow::setupWeekView()
         buttonGroup->addButton(dayBtn);  // 将按钮添加到按钮组
         connect(dayBtn, &QPushButton::clicked, [this, i]() {
             QDate date = currentWeekStart.addDays(i);
-            // 不再更隐藏日控件
+            // 不再更隐藏日件
             // ui->calendarWidget->setSelectedDate(date);
             // 直接更新事件列表
             updateWeekEvents(date);
@@ -853,7 +853,7 @@ void MainWindow::updateWeekEvents(const QDate& date)
             titleLayout->setSpacing(8);
             titleLayout->setContentsMargins(8, 8, 8, 8);
 
-            // 添加颜色指示器
+            // ��加颜色指示器
             QLabel* colorIndicator = new QLabel;
             colorIndicator->setFixedSize(12, 12);
             colorIndicator->setStyleSheet(QString("background-color: %1; border-radius: 6px;")
@@ -954,7 +954,7 @@ void MainWindow::dropEvent(QDropEvent* event)
     QCalendarWidget* calendar = ui->calendarWidget;
     QPoint pos = calendar->mapFromGlobal(QCursor::pos());
 
-    // ���算鼠标位置对应的日期
+    // 算鼠标位置对应的日期
     QDate dropDate = calendar->selectedDate();  // 默认使用选中日期
 
     // 尝试根据位置计算日期
@@ -991,7 +991,7 @@ void MainWindow::handleEventDrop(const QDate& newDate, int eventIndex)
 {
     QDate oldDate = ui->calendarWidget->selectedDate();
 
-    // 确保索引有效
+    // 确保索引有
     if (!eventMap.contains(oldDate) || eventIndex >= eventMap[oldDate].size()) {
         return;
     }
@@ -1024,24 +1024,105 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
     // 处理事件点击
     if (event->type() == QEvent::MouseButtonPress) {
         QWidget* widget = qobject_cast<QWidget*>(obj);
-        if (widget && widget->property("eventIndex").isValid()) {
-            int eventIndex = widget->property("eventIndex").toInt();
-            if (eventMap.contains(currentDate) && eventIndex < eventMap[currentDate].size()) {
-                const EventItem& selectedEvent = eventMap[currentDate][eventIndex];
+        if (widget && widget->parent()) {
+            QWidget* parentWidget = qobject_cast<QWidget*>(widget->parent());
+            if (parentWidget && parentWidget->property("timeSlot").isValid()) {
+                int slotHour = parentWidget->property("timeSlot").toInt();
                 
-                // 更新右侧详情显示
-                QListWidget* detailsList = dayView->findChild<QListWidget*>("dayViewDetailsList");
-                if (detailsList) {
-                    detailsList->clear();
-                    QString details = QString("时间：%1-%2\n标题：%3\n描述：%4")
-                                    .arg(selectedEvent.startTime.toString("HH:mm"))
-                                    .arg(selectedEvent.endTime.toString("HH:mm"))
-                                    .arg(selectedEvent.text)
-                                    .arg(selectedEvent.description);
-                    detailsList->addItem(details);
+                // 获取对应时间段的事件
+                if (eventMap.contains(currentDate)) {
+                    const QList<EventItem>& events = eventMap[currentDate];
+                    
+                    // 获取点击的事件部件在布局中的位置
+                    QHBoxLayout* slotLayout = qobject_cast<QHBoxLayout*>(parentWidget->layout());
+                    if (!slotLayout) return false;
+                    
+                    int clickedIndex = slotLayout->indexOf(widget);
+                    if (clickedIndex < 0) return false;
+
+                    // 找到对应时间段内的第clickedIndex个事件
+                    int foundEventIndex = -1;
+                    for (int i = 0; i < events.size(); ++i) {
+                        const EventItem& event = events[i];
+                        int eventStartHour = event.startTime.time().hour();
+                        if (slotHour <= eventStartHour && slotHour + 2 > eventStartHour) {
+                            foundEventIndex++;
+                            if (foundEventIndex == clickedIndex) {
+                                // 找到了点击的事件，更新右侧详情显示
+                                QListWidget* detailsList = dayView->findChild<QListWidget*>("dayViewDetailsList");
+                                if (detailsList) {
+                                    detailsList->clear();
+                                    // ... (其余显示代码保持不变)
+                                    
+                                    // 创建详情显示部件
+                                    QWidget* detailWidget = new QWidget;
+                                    QVBoxLayout* detailLayout = new QVBoxLayout(detailWidget);
+                                    detailLayout->setSpacing(15);
+                                    detailLayout->setContentsMargins(15, 15, 15, 15);
+
+                                    // 标题行（颜色圆圈 + 标题）
+                                    QWidget* titleWidget = new QWidget;
+                                    titleWidget->setStyleSheet("background: transparent; border: none;");
+                                    QHBoxLayout* titleLayout = new QHBoxLayout(titleWidget);
+                                    titleLayout->setSpacing(10);
+                                    titleLayout->setContentsMargins(0, 0, 0, 0);
+
+                                    // 颜色圆圈
+                                    QLabel* colorDot = new QLabel;
+                                    colorDot->setFixedSize(12, 12);
+                                    colorDot->setStyleSheet(QString("background-color: %1; border-radius: 6px; border: none;")
+                                                            .arg(event.color.name()));
+                                    titleLayout->addWidget(colorDot);
+
+                                    // 标题
+                                    QLabel* titleLabel = new QLabel(event.text);
+                                    titleLabel->setStyleSheet("font-size: 14px; font-weight: bold; color: black; background: transparent; border: none;");
+                                    titleLayout->addWidget(titleLabel);
+                                    titleLayout->addStretch();
+
+                                    detailLayout->addWidget(titleWidget);
+
+                                    // 时间
+                                    QLabel* timeLabel = new QLabel(QString("%1 - %2")
+                                                                   .arg(event.startTime.toString("HH:mm"))
+                                                                   .arg(event.endTime.toString("HH:mm")));
+                                    timeLabel->setStyleSheet("color: black; margin-left: 22px; background: transparent; border: none;");
+                                    detailLayout->addWidget(timeLabel);
+
+                                    // 详情（如果有）
+                                    if (!event.description.isEmpty()) {
+                                        QLabel* descLabel = new QLabel(event.description);
+                                        descLabel->setWordWrap(true);
+                                        descLabel->setMinimumHeight(100);
+                                        descLabel->setAlignment(Qt::AlignTop | Qt::AlignLeft);
+                                        descLabel->setStyleSheet(R"(
+                                            background-color: #f8f9fa;
+                                            padding: 15px;
+                                            margin-left: 22px;
+                                            margin-right: 10px;
+                                            color: black;
+                                            font-size: 13px;
+                                            line-height: 1.5;
+                                            border: none;
+                                        )");
+                                        detailLayout->addWidget(descLabel);
+                                    }
+
+                                    detailLayout->addStretch();
+
+                                    // 创建列表项并设置部件
+                                    QListWidgetItem* item = new QListWidgetItem(detailsList);
+                                    item->setSizeHint(QSize(detailsList->width() - 10, 300));
+                                    detailsList->addItem(item);
+                                    detailsList->setItemWidget(item, detailWidget);
+                                }
+                                break;
+                            }
+                        }
+                    }
                 }
+                return true;
             }
-            return true;
         }
     }
     return QMainWindow::eventFilter(obj, event);
@@ -1143,7 +1224,7 @@ void MainWindow::setupDayView()
     topLayout->addStretch();
     leftLayout->addLayout(topLayout);
 
-    // 日程表容器
+    // 日表容器
     QWidget* scheduleContainer = new QWidget;
     scheduleContainer->setStyleSheet(R"(
         QWidget {
@@ -1428,6 +1509,8 @@ void MainWindow::updateDayView()
                         // 更新容器宽度
                         int totalWidth = (slotLayout->count() * (150 + 10)) + 20;  // 事件宽度 + 间距
                         slot->setMinimumWidth(qMax(500, totalWidth));  // 保持最小宽度
+
+                        eventWidget->installEventFilter(this);  // 安装事件过滤器
 
                         break;
                     }
