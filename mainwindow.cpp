@@ -177,7 +177,7 @@ MainWindow::MainWindow(QWidget *parent)
     // 初始化工具栏
     ui->mainToolBar->setIconSize(QSize(24, 24));
 
-    // 如果系统主题没有提供图标，则使用自定义图标
+    // 如果系统主题没有提供图标，则使���自定义图标
     if (ui->action_new->icon().isNull()) {
         ui->action_new->setIcon(style()->standardIcon(QStyle::SP_FileIcon));
     }
@@ -999,7 +999,7 @@ void MainWindow::updateWeekEvents(const QDate& date)
             QListWidgetItem* eventItem = new QListWidgetItem;
             eventItem->setData(Qt::UserRole, eventIndex);  // 存储事件索引
             eventWidget->adjustSize();  // 整容器大小
-            eventItem->setSizeHint(eventWidget->sizeHint());  // 使器的建大小
+            eventItem->setSizeHint(eventWidget->sizeHint());  // 使器的���大小
             eventListWidget->addItem(eventItem);
             eventListWidget->setItemWidget(eventItem, eventWidget);
 
@@ -1159,7 +1159,7 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
 
             // 确保行列在有效范围内
             if (row >= 0 && row < 6 && col >= 0 && col < 7) {
-                // 获取当前显示的月份的第一天
+                // 获取当前显示���月份的第一天
                 QDate firstOfMonth(calendar->yearShown(), calendar->monthShown(), 1);
 
                 // 计算日历第一个格子对应的日期（可能是上个月的日期）
@@ -1320,7 +1320,11 @@ void MainWindow::setupDayView()
 
     // 修改年份标签的显示
     QLabel* yearLabel = new QLabel(QString("%1年").arg(currentDate.year()));
-    yearLabel->setStyleSheet("font-size: 18px; font-weight: bold; color: #333333;");  // 深灰色
+    yearLabel->setStyleSheet("font-size: 18px; font-weight: bold; color: #333333;");
+
+    // 将日期选择按钮移到右侧
+    topLayout->addWidget(yearLabel);
+    topLayout->addStretch();  // 添加弹性空间，将日期选择按钮推到右侧
 
     QPushButton* datePickerBtn = new QPushButton;
     datePickerBtn->setText(currentDate.toString("yyyy-MM-dd"));
@@ -1330,60 +1334,14 @@ void MainWindow::setupDayView()
             border: 1px solid #ddd;
             border-radius: 4px;
             padding: 5px 10px;
-            color: #666666;  /* 改字体颜色为中灰色 */
+            color: #666666;
         }
         QPushButton:hover {
             background: #f0f0f0;
         }
     )");
-
-    // 日期择按钮点击事件
-    connect(datePickerBtn, &QPushButton::clicked, [this, datePickerBtn]() {
-        QCalendarWidget* calendar = new QCalendarWidget(this);
-        calendar->setWindowFlags(Qt::Popup);
-        calendar->setSelectedDate(currentDate);
-
-        // 设置日历选择器的样式
-        calendar->setStyleSheet(R"(
-            QCalendarWidget {
-                background-color: white;
-                color: #666666;  /* 中灰色文字 */
-            }
-            QCalendarWidget QTableView {
-                selection-background-color: #007bff;
-                selection-color: white;
-            }
-            QCalendarWidget QWidget#qt_calendar_navigationbar {
-                background-color: white;
-            }
-            QCalendarWidget QToolButton {
-                color: #666666;
-                background-color: transparent;
-            }
-            QCalendarWidget QMenu {
-                color: #666666;
-            }
-        )");
-
-        // 设置位置
-        QPoint pos = datePickerBtn->mapToGlobal(QPoint(0, datePickerBtn->height()));
-        calendar->move(pos);
-
-        // 处理日期选择
-        connect(calendar, &QCalendarWidget::clicked, this, [this, calendar, datePickerBtn](const QDate & date) {
-            currentDate = date;
-            datePickerBtn->setText(date.toString("yyyy-MM-dd"));
-            updateDayView();
-            calendar->close();
-            calendar->deleteLater();
-        });
-
-        calendar->show();
-    });
-
-    topLayout->addWidget(yearLabel);
     topLayout->addWidget(datePickerBtn);
-    topLayout->addStretch();
+
     leftLayout->addLayout(topLayout);
 
     // 日表容器
@@ -1399,8 +1357,9 @@ void MainWindow::setupDayView()
 
     // 日期标题和切换按钮容器
     QWidget* dateTitleContainer = new QWidget;
+    dateTitleContainer->setStyleSheet("background-color: #007bff;"); // 设置蓝色背景
     QHBoxLayout* dateTitleLayout = new QHBoxLayout(dateTitleContainer);
-    dateTitleLayout->setContentsMargins(0, 0, 0, 0);
+    dateTitleLayout->setContentsMargins(10, 5, 10, 5);
     dateTitleLayout->setSpacing(10);
 
     // 上一天按钮
@@ -1410,13 +1369,13 @@ void MainWindow::setupDayView()
     prevDayBtn->setFixedSize(28, 28);
     prevDayBtn->setStyleSheet(R"(
         QPushButton {
-            background: white;
-            border: 1px solid #ddd;
+            background: transparent;
+            border: 1px solid white;
             border-radius: 14px;
             padding: 4px;
         }
         QPushButton:hover {
-            background: #f0f0f0;
+            background: rgba(255, 255, 255, 0.2);
         }
     )");
 
@@ -1424,7 +1383,7 @@ void MainWindow::setupDayView()
     QLabel* dateTitle = new QLabel(currentDate.toString("MM月dd日"));
     dateTitle->setObjectName("dayViewDateTitle");
     dateTitle->setAlignment(Qt::AlignCenter);
-    dateTitle->setStyleSheet("font-size: 24px; font-weight: bold; margin: 10px 0; color: #333333;");
+    dateTitle->setStyleSheet("font-size: 24px; font-weight: bold; margin: 10px 0; color: white; background: transparent;");
 
     // 下一天按钮
     QPushButton* nextDayBtn = new QPushButton;
@@ -1433,13 +1392,13 @@ void MainWindow::setupDayView()
     nextDayBtn->setFixedSize(28, 28);
     nextDayBtn->setStyleSheet(R"(
         QPushButton {
-            background: white;
-            border: 1px solid #ddd;
+            background: transparent;
+            border: 1px solid white;
             border-radius: 14px;
             padding: 4px;
         }
         QPushButton:hover {
-            background: #f0f0f0;
+            background: rgba(255, 255, 255, 0.2);
         }
     )");
 
@@ -1645,7 +1604,7 @@ void MainWindow::updateDayView()
         QScrollArea* scrollArea = dayView->findChild<QScrollArea *>();
         if (!scrollArea || !scrollArea->widget()) return;
 
-        // ��取所有带有 timeSlot 属性的部件
+        // 取所有带有 timeSlot 属性的部件
         QList<QWidget *> timeSlots;
         foreach (QWidget* widget, scrollArea->widget()->findChildren<QWidget*>()) {
             if (widget->property("timeSlot").isValid()) {
