@@ -453,176 +453,190 @@ void MainWindow::updateEventList()
 
 void MainWindow::on_action_edit_triggered()
 {
-    if (weekView && weekView->isVisible()) {
-        // 在周视图中编辑事件
-        QListWidgetItem* currentItem = eventListWidget->currentItem();
-        if (currentItem) {
-            // 获取当前选的日期
-            QDate selectedDate;
-            QList<QPushButton *> buttons = weekView->findChildren<QPushButton *>();
-            for (int i = 1; i <= 7; ++i) {
-                if (buttons[i]->isChecked()) {
-                    selectedDate = currentWeekStart.addDays(i - 1);
-                    break;
-                }
+    if (dayView && dayView->isVisible()) {
+        // 日视图编辑
+        QListWidget* detailsList = dayView->findChild<QListWidget *>("dayViewDetailsList");
+        if (!detailsList || detailsList->count() == 0) {
+            QMessageBox::warning(this, tr("提示"), tr("请先选择要编辑的事件"));
+            return;
+        }
+
+        // 获取事件标题
+        QWidget* detailWidget = detailsList->itemWidget(detailsList->item(0));
+        if (!detailWidget) return;
+
+        QList<QLabel *> labels = detailWidget->findChildren<QLabel *>();
+        QString eventTitle;
+        for (QLabel * label : labels) {
+            if (!label->text().contains(":") && !label->text().contains("-") && !label->text().contains("~")) {
+                eventTitle = label->text();
+                break;
             }
+        }
 
-            int eventIndex = currentItem->data(Qt::UserRole).toInt();
+        // 查找并编辑事件
+        QList<EventItem> &events = eventMap[currentDate];
+        for (EventItem& event : events) {
+            if (event.text == eventTitle) {
+                EventDialog dialog(this);
+                dialog.setEventData(event.text, event.startTime, event.endTime, event.description, event.color);
+                if (dialog.exec() == QDialog::Accepted) {
+                    event.text = dialog.getEventTitle();
+                    event.startTime = dialog.getStartTime();
+                    event.endTime = dialog.getEndTime();
+                    event.description = dialog.getDescription();
+                    event.color = dialog.getEventColor();
+                    updateDayView();
+                    detailsList->clear();
+                }
+                break;
+            }
+        }
+    } else if (weekView && weekView->isVisible()) {
+        // 周视图编辑
+        QListWidgetItem* currentItem = eventListWidget->currentItem();
+        if (!currentItem) {
+            QMessageBox::warning(this, tr("提示"), tr("请先选择要编辑的事件"));
+            return;
+        }
+
+        QList<QPushButton *> buttons = weekView->findChildren<QPushButton *>();
+        QDate selectedDate;
+        for (int i = 1; i <= 7; ++i) {
+            if (buttons[i]->isChecked()) {
+                selectedDate = currentWeekStart.addDays(i - 1);
+                break;
+            }
+        }
+
+        int eventIndex = currentItem->data(Qt::UserRole).toInt();
+        if (eventMap.contains(selectedDate) && eventIndex < eventMap[selectedDate].size()) {
             EventItem& event = eventMap[selectedDate][eventIndex];
-
             EventDialog dialog(this);
-            dialog.setEventData(event.text,
-                                event.startTime,
-                                event.endTime,
-                                event.description,
-                                event.color);
-
+            dialog.setEventData(event.text, event.startTime, event.endTime, event.description, event.color);
             if (dialog.exec() == QDialog::Accepted) {
-                // 更新事件数据
                 event.text = dialog.getEventTitle();
                 event.startTime = dialog.getStartTime();
                 event.endTime = dialog.getEndTime();
                 event.description = dialog.getDescription();
                 event.color = dialog.getEventColor();
-
-                // 更新显示
+                updateWeekView();
                 updateWeekEvents(selectedDate);
             }
-        } else {
-            QMessageBox::warning(this, tr("提示"),
-                                 tr("请先选择要编辑的事件"));
         }
     } else {
-        // 月视图编辑代码
+        // 月视图编辑
         QListWidgetItem* currentItem = ui->eventList->currentItem();
-        if (currentItem) {
-            QDate selectedDate = ui->calendarWidget->selectedDate();
-            int currentRow = ui->eventList->row(currentItem);
-            EventItem& event = eventMap[selectedDate][currentRow];
+        if (!currentItem) {
+            QMessageBox::warning(this, tr("提示"), tr("请先选择要编辑的事件"));
+            return;
+        }
 
-            EventDialog dialog(this);
-            dialog.setEventData(event.text,
-                                event.startTime,
-                                event.endTime,
-                                event.description,
-                                event.color);
+        QDate selectedDate = ui->calendarWidget->selectedDate();
+        int currentRow = ui->eventList->row(currentItem);
+        EventItem& event = eventMap[selectedDate][currentRow];
 
-            if (dialog.exec() == QDialog::Accepted) {
-                // 更新事件数据
-                event.text = dialog.getEventTitle();
-                event.startTime = dialog.getStartTime();
-                event.endTime = dialog.getEndTime();
-                event.description = dialog.getDescription();
-                event.color = dialog.getEventColor();
-
-                // 更新显示
-                updateEventList();
-            }
-        } else {
-            QMessageBox::warning(this, tr("提示"),
-                                 tr("请先选择要编辑的事件"));
+        EventDialog dialog(this);
+        dialog.setEventData(event.text, event.startTime, event.endTime, event.description, event.color);
+        if (dialog.exec() == QDialog::Accepted) {
+            event.text = dialog.getEventTitle();
+            event.startTime = dialog.getStartTime();
+            event.endTime = dialog.getEndTime();
+            event.description = dialog.getDescription();
+            event.color = dialog.getEventColor();
+            updateEventList();
         }
     }
 }
 
 void MainWindow::on_action_delete_triggered()
 {
-    if (weekView && weekView->isVisible()) {
-        // 在周视图中删除事件
-        QListWidgetItem* currentItem = eventListWidget->currentItem();
-        if (currentItem) {
-            // 获取当前选的日期
-            QDate selectedDate;
-            QList<QPushButton *> buttons = weekView->findChildren<QPushButton *>();
-            for (int i = 1; i <= 7; ++i) {
-                if (buttons[i]->isChecked()) {
-                    selectedDate = currentWeekStart.addDays(i - 1);
-                    break;
-                }
+    if (dayView && dayView->isVisible()) {
+        // 日视图删除
+        QListWidget* detailsList = dayView->findChild<QListWidget *>("dayViewDetailsList");
+        if (!detailsList || detailsList->count() == 0) {
+            QMessageBox::warning(this, tr("提示"), tr("请先选择要删除的事件"));
+            return;
+        }
+
+        // 获取事件标题
+        QWidget* detailWidget = detailsList->itemWidget(detailsList->item(0));
+        if (!detailWidget) return;
+
+        QList<QLabel *> labels = detailWidget->findChildren<QLabel *>();
+        QString eventTitle;
+        for (QLabel * label : labels) {
+            if (!label->text().contains(":") && !label->text().contains("-") && !label->text().contains("~")) {
+                eventTitle = label->text();
+                break;
             }
+        }
 
-            int eventIndex = currentItem->data(Qt::UserRole).toInt();
-            QString eventText = eventMap[selectedDate][eventIndex].text;
-
-            if (QMessageBox::question(this, tr("确认删除"),
-                                      tr("是否确定删除事件：%1？").arg(eventText))
-                    == QMessageBox::Yes) {
-                // 从事件映射中删除
-                eventMap[selectedDate].removeAt(eventIndex);
-
-                // 立即更新对应日期按的事件指示器
-                for (int i = 1; i <= 7; ++i) {
-                    QDate btnDate = currentWeekStart.addDays(i - 1);
-                    if (btnDate == selectedDate) {
-                        QPushButton* btn = buttons[i];
-
-                        // 清理旧的指示器
-                        QList<QWidget *> oldWidgets = btn->findChildren<QWidget *>("dotsContainer");
-                        for (QWidget * widget : oldWidgets) {
-                            delete widget;
-                        }
-
-                        // 如果还有事件，创建新的事件指示器
-                        if (eventMap.contains(selectedDate) && !eventMap[selectedDate].isEmpty()) {
-                            QWidget* dotsContainer = new QWidget(btn);
-                            dotsContainer->setObjectName("dotsContainer");
-                            QHBoxLayout* dotsLayout = new QHBoxLayout(dotsContainer);
-                            dotsLayout->setSpacing(2);
-                            dotsLayout->setContentsMargins(0, 0, 0, 0);
-                            dotsLayout->setAlignment(Qt::AlignCenter);
-
-                            for (const EventItem& event : eventMap[selectedDate]) {
-                                QLabel* dot = new QLabel(dotsContainer);
-                                dot->setFixedSize(6, 6);
-                                dot->setStyleSheet(QString("background-color: %1; border-radius: 3px;")
-                                                   .arg(event.color.name()));
-                                dotsLayout->addWidget(dot);
-                            }
-
-                            dotsContainer->setGeometry(0, btn->height() - 15, btn->width(), 12);
-                            dotsContainer->show();
-                        }
-                        break;
+        // 查找并删除事件
+        QList<EventItem> &events = eventMap[currentDate];
+        for (int i = 0; i < events.size(); ++i) {
+            if (events[i].text == eventTitle) {
+                if (QMessageBox::question(this, tr("确认删除"),
+                                          tr("是否确定删除事件：%1？").arg(eventTitle)) == QMessageBox::Yes) {
+                    events.removeAt(i);
+                    if (events.isEmpty()) {
+                        eventMap.remove(currentDate);
                     }
+                    updateDayView();
+                    detailsList->clear();
                 }
+                break;
+            }
+        }
+    } else if (weekView && weekView->isVisible()) {
+        // 周视图删除
+        QListWidgetItem* currentItem = eventListWidget->currentItem();
+        if (!currentItem) {
+            QMessageBox::warning(this, tr("提示"), tr("请先选择要删除的事件"));
+            return;
+        }
 
-                // 如果该日期没有事件了，从映射中移除
+        QList<QPushButton *> buttons = weekView->findChildren<QPushButton *>();
+        QDate selectedDate;
+        for (int i = 1; i <= 7; ++i) {
+            if (buttons[i]->isChecked()) {
+                selectedDate = currentWeekStart.addDays(i - 1);
+                break;
+            }
+        }
+
+        int eventIndex = currentItem->data(Qt::UserRole).toInt();
+        if (eventMap.contains(selectedDate) && eventIndex < eventMap[selectedDate].size()) {
+            QString eventText = eventMap[selectedDate][eventIndex].text;
+            if (QMessageBox::question(this, tr("确认删除"),
+                                      tr("是否确定删除事件：%1？").arg(eventText)) == QMessageBox::Yes) {
+                eventMap[selectedDate].removeAt(eventIndex);
                 if (eventMap[selectedDate].isEmpty()) {
                     eventMap.remove(selectedDate);
                 }
-
-                // 更新事件列表
+                updateWeekView();
                 updateWeekEvents(selectedDate);
             }
-        } else {
-            QMessageBox::warning(this, tr("提示"),
-                                 tr("请先选择要删除的事件"));
         }
     } else {
-        // 月视图删除代码
+        // 月视图删除
         QListWidgetItem* currentItem = ui->eventList->currentItem();
-        if (currentItem) {
-            QDate selectedDate = ui->calendarWidget->selectedDate();
-            int currentRow = ui->eventList->row(currentItem);
-            QString eventText = eventMap[selectedDate][currentRow].text;
+        if (!currentItem) {
+            QMessageBox::warning(this, tr("提示"), tr("请先选择要删除的事件"));
+            return;
+        }
 
-            if (QMessageBox::question(this, tr("确认删除"),
-                                      tr("是否确定删除事件：%1？").arg(eventText))
-                    == QMessageBox::Yes) {
-                // 从事映射中删除
-                eventMap[selectedDate].removeAt(currentRow);
+        QDate selectedDate = ui->calendarWidget->selectedDate();
+        int currentRow = ui->eventList->row(currentItem);
+        QString eventText = eventMap[selectedDate][currentRow].text;
 
-                // 果该日期没有事件了，从映射中移除
-                if (eventMap[selectedDate].isEmpty()) {
-                    eventMap.remove(selectedDate);
-                }
-
-                // 更新显示
-                updateEventList();
+        if (QMessageBox::question(this, tr("确认删除"),
+                                  tr("是否确定删除事件：%1？").arg(eventText)) == QMessageBox::Yes) {
+            eventMap[selectedDate].removeAt(currentRow);
+            if (eventMap[selectedDate].isEmpty()) {
+                eventMap.remove(selectedDate);
             }
-        } else {
-            QMessageBox::warning(this, tr("提示"),
-                                 tr("请先选择要删除的事件"));
+            updateEventList();
         }
     }
 }
@@ -775,62 +789,78 @@ void MainWindow::updateWeekView()
 {
     if (!weekView) return;
 
-    // 更新月标签
-    QLabel* yearMonthLabel = weekView->findChild<QLabel *>("yearMonthLabel");
-    if (yearMonthLabel) {
-        yearMonthLabel->setText(QString("%1年%2月").arg(currentWeekStart.year())
-                                .arg(currentWeekStart.month()));
-    }
-
-    // 更新日期按钮
-    QList<QPushButton *> dayButtons = weekView->findChildren<QPushButton *>();
-    QDate selectedDate = currentWeekStart; // 默认选中第一天
-    // 跳过前后箭头按钮
-    for (int i = 1; i <= 7; ++i) {
-        QPushButton* btn = dayButtons[i];
-        QDate date = currentWeekStart.addDays(i - 1);
-
-        // 清的内容
-        QList<QWidget *> oldWidgets = btn->findChildren<QWidget *>();
-        for (QWidget * widget : oldWidgets) {
-            delete widget;
+    try {
+        // 更新月标签
+        QLabel* yearMonthLabel = weekView->findChild<QLabel *>("yearMonthLabel");
+        if (yearMonthLabel) {
+            yearMonthLabel->setText(QString("%1年%2月").arg(currentWeekStart.year())
+                                    .arg(currentWeekStart.month()));
         }
 
-        // 设置期文本
-        btn->setText(QString::number(date.day()));
+        // 更新日期按钮
+        QList<QPushButton *> buttons = weekView->findChildren<QPushButton *>();
+        if (buttons.size() < 8) return;  // 确保有足够的按钮（包括前后箭头）
 
-        // 果该日期有事件，加事件指示器
-        if (eventMap.contains(date)) {
-            QWidget* dotsContainer = new QWidget(btn);
-            QHBoxLayout* dotsLayout = new QHBoxLayout(dotsContainer);
-            dotsLayout->setSpacing(2);
-            dotsLayout->setContentsMargins(0, 0, 0, 0);
-            dotsLayout->setAlignment(Qt::AlignCenter);
+        // 默认选中第一天
+        QDate selectedDate = currentWeekStart;
 
-            for (const EventItem& event : eventMap[date]) {
-                QLabel* dot = new QLabel(dotsContainer);
-                dot->setFixedSize(6, 6);
-                dot->setStyleSheet(QString("background-color: %1; border-radius: 3px;")
-                                   .arg(event.color.name()));
-                dotsLayout->addWidget(dot);
+        // 跳过前后箭头按钮
+        for (int i = 1; i <= 7; ++i) {
+            QPushButton* btn = buttons[i];
+            if (!btn) continue;  // 检查按钮是否有效
+
+            QDate date = currentWeekStart.addDays(i - 1);
+
+            // 清理按钮上的所有事件指示器
+            QList<QWidget *> oldWidgets = btn->findChildren<QWidget *>("dotsContainer");
+            for (QWidget * widget : oldWidgets) {
+                if (widget) {
+                    widget->setParent(nullptr);
+                    widget->deleteLater();
+                }
             }
 
-            // 设置事件指示器的位置在按钮底部
-            dotsContainer->setGeometry(0, btn->height() - 15, btn->width(), 12);
-            dotsContainer->show();
+            // 设置日期文本
+            btn->setText(QString::number(date.day()));
+
+            // 如果该日期有事件，添加事件指示器
+            if (eventMap.contains(date)) {
+                QWidget* dotsContainer = new QWidget(btn);
+                dotsContainer->setObjectName("dotsContainer");
+                QHBoxLayout* dotsLayout = new QHBoxLayout(dotsContainer);
+                dotsLayout->setSpacing(2);
+                dotsLayout->setContentsMargins(0, 0, 0, 0);
+                dotsLayout->setAlignment(Qt::AlignCenter);
+
+                for (const EventItem& event : eventMap[date]) {
+                    QLabel* dot = new QLabel(dotsContainer);
+                    dot->setFixedSize(6, 6);
+                    dot->setStyleSheet(QString("background-color: %1; border-radius: 3px;")
+                                       .arg(event.color.name()));
+                    dotsLayout->addWidget(dot);
+                }
+
+                // 设置事件指示器的位置在按钮底部
+                dotsContainer->setGeometry(0, btn->height() - 15, btn->width(), 12);
+                dotsContainer->show();
+            }
+
+            // 设置选中状态
+            btn->setChecked(i == 1);
+            if (i == 1) {
+                selectedDate = date;
+            }
         }
 
-        // 设置选中状态
-        if (i == 1) {
-            btn->setChecked(true);
-            selectedDate = date;
-        } else {
-            btn->setChecked(false);
+        // 更新事件列表
+        if (eventListWidget) {
+            eventListWidget->clear();
+            updateWeekEvents(selectedDate);
         }
+
+    } catch (const std::exception& e) {
+        qDebug() << "Error in updateWeekView:" << e.what();
     }
-
-    // 更新事件列表
-    updateWeekEvents(selectedDate);
 }
 
 void MainWindow::updateWeekEvents(const QDate& date)
@@ -853,7 +883,7 @@ void MainWindow::updateWeekEvents(const QDate& date)
             titleLayout->setSpacing(8);
             titleLayout->setContentsMargins(8, 8, 8, 8);
 
-            // ��加颜色指示器
+            // 加颜色指示器
             QLabel* colorIndicator = new QLabel;
             colorIndicator->setFixedSize(12, 12);
             colorIndicator->setStyleSheet(QString("background-color: %1; border-radius: 6px;")
@@ -955,7 +985,7 @@ void MainWindow::dropEvent(QDropEvent* event)
     QPoint pos = calendar->mapFromGlobal(QCursor::pos());
 
     // 算鼠标位置对应的日期
-    QDate dropDate = calendar->selectedDate();  // 默认使用选中日期
+    QDate dropDate = calendar->selectedDate();  // 认使用选中日期
 
     // 尝试根据位置计算日期
     if (calendar->rect().contains(pos)) {
@@ -1023,20 +1053,20 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
 {
     // 处理事件点击
     if (event->type() == QEvent::MouseButtonPress) {
-        QWidget* widget = qobject_cast<QWidget*>(obj);
+        QWidget* widget = qobject_cast<QWidget *>(obj);
         if (widget && widget->parent()) {
-            QWidget* parentWidget = qobject_cast<QWidget*>(widget->parent());
+            QWidget* parentWidget = qobject_cast<QWidget *>(widget->parent());
             if (parentWidget && parentWidget->property("timeSlot").isValid()) {
                 int slotHour = parentWidget->property("timeSlot").toInt();
-                
+
                 // 获取对应时间段的事件
                 if (eventMap.contains(currentDate)) {
-                    const QList<EventItem>& events = eventMap[currentDate];
-                    
-                    // 获取点击的事件部件在布局中的位置
-                    QHBoxLayout* slotLayout = qobject_cast<QHBoxLayout*>(parentWidget->layout());
+                    const QList<EventItem> &events = eventMap[currentDate];
+
+                    // 获取点击的事件部在布局中的位置
+                    QHBoxLayout* slotLayout = qobject_cast<QHBoxLayout *>(parentWidget->layout());
                     if (!slotLayout) return false;
-                    
+
                     int clickedIndex = slotLayout->indexOf(widget);
                     if (clickedIndex < 0) return false;
 
@@ -1049,12 +1079,12 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
                             foundEventIndex++;
                             if (foundEventIndex == clickedIndex) {
                                 // 找到了点击的事件，更新右侧详情显示
-                                QListWidget* detailsList = dayView->findChild<QListWidget*>("dayViewDetailsList");
+                                QListWidget* detailsList = dayView->findChild<QListWidget *>("dayViewDetailsList");
                                 if (detailsList) {
                                     detailsList->clear();
                                     // ... (其余显示代码保持不变)
-                                    
-                                    // 创建详情显示部件
+
+                                    // 创建情显示部件
                                     QWidget* detailWidget = new QWidget;
                                     QVBoxLayout* detailLayout = new QVBoxLayout(detailWidget);
                                     detailLayout->setSpacing(15);
@@ -1318,12 +1348,12 @@ void MainWindow::setupDayView()
         if (hour == 22) {
             // 特殊处理22:00~24:00的情况
             timeText = QString("%1 ~ %2")
-                        .arg(QTime(22, 0).toString("HH:mm"))
-                        .arg(QTime(0, 0).toString("24:00"));  // 使用24:00而不是00:00
+                       .arg(QTime(22, 0).toString("HH:mm"))
+                       .arg(QTime(0, 0).toString("24:00"));  // 使用24:00而不是00:00
         } else {
             timeText = QString("%1 ~ %2")
-                        .arg(QTime(hour, 0).toString("HH:mm"))
-                        .arg(QTime(hour + 2, 0).toString("HH:mm"));
+                       .arg(QTime(hour, 0).toString("HH:mm"))
+                       .arg(QTime(hour + 2, 0).toString("HH:mm"));
         }
         timeLabel->setText(timeText);
         timeLabel->setFixedWidth(120);
@@ -1404,7 +1434,7 @@ void MainWindow::setupDayView()
     // 显示日视图
     dayView->show();
 
-    // 更新日视图内容
+    // 更新日视图内��
     QTimer::singleShot(0, this, &MainWindow::updateDayView);
 }
 
@@ -1414,36 +1444,36 @@ void MainWindow::updateDayView()
 
     try {
         // 更新日期标题
-        QLabel* dateTitle = dayView->findChild<QLabel*>("dayViewDateTitle");
+        QLabel* dateTitle = dayView->findChild<QLabel *>("dayViewDateTitle");
         if (dateTitle) {
             dateTitle->setText(currentDate.toString("MM月dd日"));
         }
 
         // 获取所有时间段容器
-        QScrollArea* scrollArea = dayView->findChild<QScrollArea*>();
+        QScrollArea* scrollArea = dayView->findChild<QScrollArea *>();
         if (!scrollArea || !scrollArea->widget()) return;
 
         // 获取所有带有 timeSlot 属性的部件
-        QList<QWidget*> timeSlots;
-        foreach(QWidget* widget, scrollArea->widget()->findChildren<QWidget*>()) {
+        QList<QWidget *> timeSlots;
+        foreach (QWidget* widget, scrollArea->widget()->findChildren<QWidget*>()) {
             if (widget->property("timeSlot").isValid()) {
                 timeSlots.append(widget);
             }
         }
 
         // 清理现有事件显示
-        for (QWidget* slot : timeSlots) {
+        for (QWidget * slot : timeSlots) {
             // 修改这里：先将parent()转换为QWidget
-            QWidget* parentWidget = qobject_cast<QWidget*>(slot->parent());
+            QWidget* parentWidget = qobject_cast<QWidget *>(slot->parent());
             if (!parentWidget) continue;
 
-            QHBoxLayout* slotLayout = qobject_cast<QHBoxLayout*>(parentWidget->layout());
+            QHBoxLayout* slotLayout = qobject_cast<QHBoxLayout *>(parentWidget->layout());
             if (!slotLayout || slotLayout->count() < 2) continue;
 
             QWidget* eventCell = slotLayout->itemAt(1)->widget();
             if (!eventCell) continue;
 
-            QHBoxLayout* cellLayout = qobject_cast<QHBoxLayout*>(eventCell->layout());
+            QHBoxLayout* cellLayout = qobject_cast<QHBoxLayout *>(eventCell->layout());
             if (!cellLayout) continue;
 
             // 清理现有事件
@@ -1458,15 +1488,15 @@ void MainWindow::updateDayView()
 
         // 添加事件到对应时间段
         if (eventMap.contains(currentDate)) {
-            const QList<EventItem>& events = eventMap[currentDate];
+            const QList<EventItem> &events = eventMap[currentDate];
             for (const EventItem& event : events) {
                 int startHour = event.startTime.time().hour();
 
                 // 找到对应的时间段
-                for (QWidget* slot : timeSlots) {
+                for (QWidget * slot : timeSlots) {
                     int slotHour = slot->property("timeSlot").toInt();
                     if (slotHour <= startHour && slotHour + 2 > startHour) {
-                        QHBoxLayout* slotLayout = qobject_cast<QHBoxLayout*>(slot->layout());
+                        QHBoxLayout* slotLayout = qobject_cast<QHBoxLayout *>(slot->layout());
                         if (!slotLayout) continue;
 
                         // 创建事件显示部件
@@ -1483,7 +1513,7 @@ void MainWindow::updateDayView()
                                 border: none;
                             }
                         )").arg(event.color.name())
-                          .arg(event.color.darker(120).name()));
+                                                   .arg(event.color.darker(120).name()));
 
                         QVBoxLayout* eventItemLayout = new QVBoxLayout(eventWidget);  // 修改变量名
                         eventItemLayout->setContentsMargins(4, 2, 4, 2);
@@ -1491,8 +1521,8 @@ void MainWindow::updateDayView()
 
                         // 添加时间标签
                         QLabel* timeLabel = new QLabel(QString("%1-%2")
-                                           .arg(event.startTime.toString("HH:mm"))
-                                           .arg(event.endTime.toString("HH:mm")));
+                                                       .arg(event.startTime.toString("HH:mm"))
+                                                       .arg(event.endTime.toString("HH:mm")));
                         timeLabel->setStyleSheet("background: transparent; color: white; font-size: 10px;");
                         timeLabel->setAlignment(Qt::AlignLeft);
                         eventItemLayout->addWidget(timeLabel);  // 使用正确的变量名
