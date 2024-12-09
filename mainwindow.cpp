@@ -79,14 +79,14 @@ MainWindow::MainWindow(QWidget *parent)
             background-color: #e6e6e6;
         }
         QCalendarWidget QToolButton {
-            color: black;
+            color: white;
             background-color: transparent;
             border: none;
             border-radius: 4px;
             padding: 4px;
         }
         QCalendarWidget QToolButton:hover {
-            background-color: #e6e6e6;
+            background-color: rgba(255, 255, 255, 0.2);
         }
         QCalendarWidget QMenu {
             background-color: white;
@@ -153,6 +153,19 @@ MainWindow::MainWindow(QWidget *parent)
             border-top: 1px solid #ddd;
             color: black;
         }
+        QCalendarWidget QWidget#qt_calendar_navigationbar {
+            background-color: #007bff;
+        }
+        QCalendarWidget QSpinBox {
+            color: white;
+            background-color: transparent;
+        }
+        QCalendarWidget QTableView QHeaderView::section {
+            color: white;
+            background-color: #007bff;
+            border: none;
+            padding: 5px;
+        }
     )");
 
     // 设置日历部件的样式
@@ -177,7 +190,7 @@ MainWindow::MainWindow(QWidget *parent)
     // 初始化工具栏
     ui->mainToolBar->setIconSize(QSize(24, 24));
 
-    // 如果系统主题没有提供图标，则使���自定义图标
+    // 如果系统主题没有提供图标，则使用自定义图标
     if (ui->action_new->icon().isNull()) {
         ui->action_new->setIcon(style()->standardIcon(QStyle::SP_FileIcon));
     }
@@ -946,7 +959,7 @@ void MainWindow::updateWeekEvents(const QDate& date)
     eventListWidget->setSelectionMode(QAbstractItemView::SingleSelection);  // 确保单选模式
 
     if (eventMap.contains(date)) {
-        int eventIndex = 0;  // 用于跟踪事件索引
+        int eventIndex = 0;  // 用于跟踪事��索引
         for (const EventItem& event : eventMap[date]) {
             // 为每个事件创建一个容器widget
             QWidget* eventWidget = new QWidget;
@@ -1743,8 +1756,8 @@ void MainWindow::onEventItemDoubleClicked(QListWidgetItem* item)
 
         // 时间
         QLabel* timeLabel = new QLabel(QString("%1 - %2")
-                                       .arg(event.startTime.toString("HH:mm"))
-                                       .arg(event.endTime.toString("HH:mm")));
+                                   .arg(event.startTime.toString("HH:mm"))
+                                   .arg(event.endTime.toString("HH:mm")));
         timeLabel->setStyleSheet("color: #666666; margin-left: 22px; background: transparent;");
         layout->addWidget(timeLabel);
 
