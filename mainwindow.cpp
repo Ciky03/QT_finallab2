@@ -24,6 +24,9 @@ MainWindow::MainWindow(QWidget *parent)
 {
     ui->setupUi(this);
 
+    // 设置程序图标
+    setWindowIcon(QIcon(":/img/img/date.png"));
+
     // 初始化当前日期为今天
     currentDate = QDate::currentDate();
 
@@ -214,7 +217,7 @@ MainWindow::MainWindow(QWidget *parent)
 
 
     // 初始化系统托盘
-    trayIcon->setIcon(style()->standardIcon(QStyle::SP_ComputerIcon));
+    trayIcon->setIcon(QIcon(":/img/img/date.png"));
     trayIcon->setToolTip(tr("日历日程"));
 
     // 创建托盘菜单
@@ -755,7 +758,7 @@ void MainWindow::setupWeekView()
     yearMonthLabel->setAlignment(Qt::AlignLeft);
     mainLayout->addWidget(yearMonthLabel);
 
-    // 星期标题和日期显示的容器
+    // 星期标��和日期显示的容器
     QWidget* calendarContainer = new QWidget(weekView);
     QVBoxLayout* calendarLayout = new QVBoxLayout(calendarContainer);
     calendarLayout->setSpacing(0);  // 减少垂直间距
@@ -913,7 +916,7 @@ void MainWindow::updateWeekView()
                 }
             }
 
-            // 设置日期文本
+            // 置日期文本
             btn->setText(QString::number(date.day()));
 
             // 如果该日期有事件，添加件指示器
@@ -1007,7 +1010,7 @@ void MainWindow::updateWeekEvents(const QDate& date)
                 );
                 descLabel->setWordWrap(true);
                 descLabel->setMinimumHeight(50);  // 设置最小度
-                descLabel->adjustSize();  // 自动调整大小以适应内容
+                descLabel->adjustSize();  // ��动调整大小以适应内容
                 eventLayout->addWidget(descLabel);
             }
 
@@ -1127,10 +1130,10 @@ void MainWindow::handleEventDrop(const QDate& newDate, int eventIndex)
     event.startTime = QDateTime(newDate, startTime);
     event.endTime = QDateTime(newDate, endTime);
 
-    // 更新数据库
+    // ���新数据库
     updateEventInDatabase(event.id, event);
 
-    // ���旧日期移除事件
+    // 旧日期移除事件
     eventMap[oldDate].removeAt(eventIndex);
     if (eventMap[oldDate].isEmpty()) {
         eventMap.remove(oldDate);
@@ -1162,7 +1165,7 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
             // 算鼠位置对应的日期
             QCalendarWidget* calendar = ui->calendarWidget;
 
-            // 获取日历视图的大小信息
+            // 获取日历视图大小信息
             int totalHeight = calendar->height();
             int totalWidth = calendar->width();
             int headerHeight = totalHeight / 8;  // 估计标题栏度
@@ -1175,7 +1178,7 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
 
             // 确保行列在有效范围内
             if (row >= 0 && row < 6 && col >= 0 && col < 7) {
-                // 获取当前显示���月份的第一天
+                // 获取当前显示月份的第一天
                 QDate firstOfMonth(calendar->yearShown(), calendar->monthShown(), 1);
 
                 // 计算日历第一个格子对应的日期（可能是上个月的日期）
@@ -1231,7 +1234,7 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
                                         detailsList->clear();
                                         // ... (其余显示代码保持不变)
 
-                                        // 创建��显示部件
+                                        // 创建显示部件
                                         QWidget* detailWidget = new QWidget;
                                         QVBoxLayout* detailLayout = new QVBoxLayout(detailWidget);
                                         detailLayout->setSpacing(15);
@@ -1450,7 +1453,7 @@ void MainWindow::setupDayView()
     dateTitle->setAlignment(Qt::AlignCenter);
     dateTitle->setStyleSheet("font-size: 24px; font-weight: bold; margin: 10px 0; color: white; background: transparent;");
 
-    // 下一天按钮
+    // ��一天按钮
     QPushButton* nextDayBtn = new QPushButton;
     nextDayBtn->setIcon(QIcon(":/img/img/next.png"));
     nextDayBtn->setIconSize(QSize(16, 16));
@@ -1491,7 +1494,7 @@ void MainWindow::setupDayView()
     // 时间表
     QScrollArea* scrollArea = new QScrollArea;
     scrollArea->setWidgetResizable(true);
-    scrollArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOn);  // 始显水平滚动条
+    scrollArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOn);  // 始显水平滚动
     scrollArea->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
     scrollArea->setStyleSheet(R"(
         QScrollArea { 
@@ -1778,7 +1781,7 @@ void MainWindow::onEventItemDoubleClicked(QListWidgetItem* item)
     if (eventMap.contains(selectedDate) && currentRow < eventMap[selectedDate].size()) {
         const EventItem& event = eventMap[selectedDate][currentRow];
 
-        // 创建详情对话框
+        // 创建详情话框
         QDialog dialog(this);
         dialog.setWindowTitle(tr("事件详情"));
         dialog.setMinimumWidth(300);
@@ -1788,7 +1791,7 @@ void MainWindow::onEventItemDoubleClicked(QListWidgetItem* item)
 
         // 标题行（颜色圆圈 + 标题）
         QWidget* titleWidget = new QWidget;
-        titleWidget->setStyleSheet("background: transparent;");  // ��置背景透明
+        titleWidget->setStyleSheet("background: transparent;");  // 置背景透明
         QHBoxLayout* titleLayout = new QHBoxLayout(titleWidget);
 
         // 颜色圆圈
@@ -1937,12 +1940,12 @@ void MainWindow::setupReminderSystem()
 {
     // 连接定时器信号
     connect(reminderTimer, &QTimer::timeout, this, &MainWindow::checkUpcomingEvents);
-
+    
     // 启动定时器
     reminderTimer->start(CHECK_INTERVAL);
-
+    
     // 确保系统托盘图标支持消息气泡
-    trayIcon->setIcon(QIcon(":/img/img/about.png"));  // 使用合适的图标
+    trayIcon->setIcon(QIcon(":/img/img/date.png"));  // 修改为使用 date.png
     trayIcon->show();
 }
 
@@ -2026,7 +2029,7 @@ void MainWindow::closeEvent(QCloseEvent *event)
         event->ignore();  // 忽略关闭事件
         hide();          // 隐藏主窗口
         
-        // 如果是第一次最小化，显示提示信息
+        // 如果是第一次最小化，显示���示信息
         if (!trayIcon->isVisible()) {
             trayIcon->showMessage(
                 tr("提示"),
