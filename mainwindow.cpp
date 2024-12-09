@@ -158,7 +158,7 @@ MainWindow::MainWindow(QWidget *parent)
     ui->calendarWidget->setNavigationBarVisible(true);
     ui->calendarWidget->setGridVisible(true);
 
-    // 设置日历导航按钮的���式
+    // 设置日历导航按钮的式
     QToolButton* prevMonth = ui->calendarWidget->findChild<QToolButton *>("qt_calendar_prevmonth");
     QToolButton* nextMonth = ui->calendarWidget->findChild<QToolButton *>("qt_calendar_nextmonth");
 
@@ -277,18 +277,24 @@ void MainWindow::on_action_new_triggered()
         newEvent.description = dialog.getDescription();
         newEvent.color = dialog.getEventColor();
 
-        // 添加事件到映射中
-        QDate eventDate = newEvent.startTime.date();
-        eventMap[eventDate].append(newEvent);
+        // 保存到数据库并获取新的事件ID
+        int newId = saveEventToDatabase(newEvent);
+        if (newId > 0) {
+            newEvent.id = newId;  // 设置事件ID
+            
+            // 添加事件到映射中
+            QDate eventDate = newEvent.startTime.date();
+            eventMap[eventDate].append(newEvent);
 
-        // 根据当前视图更新显示
-        if (dayView && dayView->isVisible()) {
-            updateDayView();
-        } else if (weekView && weekView->isVisible()) {
-            updateWeekView();
-            updateWeekEvents(selectedDate);
-        } else {
-            updateEventList();
+            // 根据当前视图更新显示
+            if (dayView && dayView->isVisible()) {
+                updateDayView();
+            } else if (weekView && weekView->isVisible()) {
+                updateWeekView();
+                updateWeekEvents(selectedDate);
+            } else {
+                updateEventList();
+            }
         }
     }
 }
@@ -503,6 +509,9 @@ void MainWindow::on_action_edit_triggered()
                     event.description = dialog.getDescription();
                     event.color = dialog.getEventColor();
 
+                    // 更新数据库
+                    updateEventInDatabase(event.id, event);
+
                     // 更新日视图
                     updateDayView();
 
@@ -663,6 +672,10 @@ void MainWindow::on_action_delete_triggered()
             if (events[i].text == eventTitle) {
                 if (QMessageBox::question(this, tr("确认删除"),
                                           tr("是否确定删除事件：%1？").arg(eventTitle)) == QMessageBox::Yes) {
+                    // 从数据库中删除
+                    deleteEventFromDatabase(events[i].id);
+                    
+                    // 从内存中删除
                     events.removeAt(i);
                     if (events.isEmpty()) {
                         eventMap.remove(currentDate);
@@ -695,6 +708,10 @@ void MainWindow::on_action_delete_triggered()
             QString eventText = eventMap[selectedDate][eventIndex].text;
             if (QMessageBox::question(this, tr("确认删除"),
                                       tr("是否确定删除事件：%1？").arg(eventText)) == QMessageBox::Yes) {
+                // 从数据库中删除
+                deleteEventFromDatabase(eventMap[selectedDate][eventIndex].id);
+                
+                // 从内存中删除
                 eventMap[selectedDate].removeAt(eventIndex);
                 if (eventMap[selectedDate].isEmpty()) {
                     eventMap.remove(selectedDate);
@@ -717,6 +734,10 @@ void MainWindow::on_action_delete_triggered()
 
         if (QMessageBox::question(this, tr("确认删除"),
                                   tr("是否确定删除事件：%1？").arg(eventText)) == QMessageBox::Yes) {
+            // 从数据库中删除
+            deleteEventFromDatabase(eventMap[selectedDate][currentRow].id);
+            
+            // 从���存中删除
             eventMap[selectedDate].removeAt(currentRow);
             if (eventMap[selectedDate].isEmpty()) {
                 eventMap.remove(selectedDate);
@@ -754,7 +775,7 @@ void MainWindow::setupWeekView()
     QHBoxLayout* weekDayLayout = new QHBoxLayout();
     weekDayLayout->setSpacing(0);  // 减少水平间距
     weekDayLayout->setContentsMargins(30, 0, 30, 0);  // 左右留出箭头按钮的空间
-    QStringList weekDays = {tr("一"), tr("二"), tr("三"), tr("四"), tr("五"), tr("六"), tr("日")};
+    QStringList weekDays = {tr("一"), tr("二"), tr("三"), tr("四"), tr("��"), tr("六"), tr("日")};
     for (const QString& day : weekDays) {
         QLabel* label = new QLabel(day, weekView);
         label->setAlignment(Qt::AlignCenter);
@@ -786,7 +807,7 @@ void MainWindow::setupWeekView()
             QDate date = currentWeekStart.addDays(i);
             // 不再更隐藏日件
             // ui->calendarWidget->setSelectedDate(date);
-            // 直接更���事件列表
+            // 直接���事件列表
             updateWeekEvents(date);
 
             // 更新所有按钮的选中状态
@@ -1007,7 +1028,7 @@ void MainWindow::updateWeekEvents(const QDate& date)
             QListWidgetItem* eventItem = new QListWidgetItem;
             eventItem->setData(Qt::UserRole, eventIndex);  // 存储事件索引
             eventWidget->adjustSize();  // 整容器大小
-            eventItem->setSizeHint(eventWidget->sizeHint());  // 使器的建议大小
+            eventItem->setSizeHint(eventWidget->sizeHint());  // 使器的建���大小
             eventListWidget->addItem(eventItem);
             eventListWidget->setItemWidget(eventItem, eventWidget);
 
@@ -1069,7 +1090,7 @@ void MainWindow::dropEvent(QDropEvent* event)
     QCalendarWidget* calendar = ui->calendarWidget;
     QPoint pos = calendar->mapFromGlobal(QCursor::pos());
 
-    // 算鼠标位置对应的日期
+    // 算���标位置对应的日期
     QDate dropDate = calendar->selectedDate();  // 认使用选中日期
 
     // 尝试根据位置计算日期
@@ -1106,12 +1127,11 @@ void MainWindow::handleEventDrop(const QDate& newDate, int eventIndex)
 {
     QDate oldDate = ui->calendarWidget->selectedDate();
 
-    // 确保索引有
     if (!eventMap.contains(oldDate) || eventIndex >= eventMap[oldDate].size()) {
         return;
     }
 
-    // 取件
+    // 获取事件
     EventItem event = eventMap[oldDate][eventIndex];
 
     // 调整事件的日期
@@ -1119,6 +1139,9 @@ void MainWindow::handleEventDrop(const QDate& newDate, int eventIndex)
     QTime endTime = event.endTime.time();
     event.startTime = QDateTime(newDate, startTime);
     event.endTime = QDateTime(newDate, endTime);
+
+    // 更新数据库
+    updateEventInDatabase(event.id, event);
 
     // 从旧日期移除事件
     eventMap[oldDate].removeAt(eventIndex);
@@ -1130,7 +1153,7 @@ void MainWindow::handleEventDrop(const QDate& newDate, int eventIndex)
     eventMap[newDate].append(event);
 
     // 更新显示
-    ui->calendarWidget->setSelectedDate(newDate);  // 选中新日期
+    ui->calendarWidget->setSelectedDate(newDate);
     updateEventList();
 }
 
@@ -1312,7 +1335,7 @@ void MainWindow::setupDayView()
         dayView = nullptr;
     }
 
-    // 创建日视图主容器
+    // 建日视图主容器
     dayView = new QWidget(this);
     QHBoxLayout* mainLayout = new QHBoxLayout(dayView);
     mainLayout->setSpacing(10);
@@ -1738,7 +1761,7 @@ void MainWindow::updateDayView()
                         slotLayout->addWidget(eventWidget);
 
                         // 更新容器宽度
-                        int totalWidth = (slotLayout->count() * (150 + 10)) + 20;  // 事件宽度 + 间距
+                        int totalWidth = (slotLayout->count() * (150 + 10)) + 20;  // 事件��度 + 间距
                         slot->setMinimumWidth(qMax(500, totalWidth));  // 保持最小宽度
 
                         eventWidget->installEventFilter(this);  // 安装事件过滤器
@@ -1767,7 +1790,7 @@ void MainWindow::onEventItemDoubleClicked(QListWidgetItem* item)
         QDialog dialog(this);
         dialog.setWindowTitle(tr("事件详情"));
         dialog.setMinimumWidth(300);
-        dialog.setStyleSheet("QDialog { background-color: white; }");  // 设置对话框背景为白色
+        dialog.setStyleSheet("QDialog { background-color: white; }");  // 设置话框背景为白色
 
         QVBoxLayout* layout = new QVBoxLayout(&dialog);
 
@@ -1854,7 +1877,7 @@ void MainWindow::loadEventsFromDatabase()
         const QVariantMap& eventData = pair.second;
         
         EventItem event;
-        event.id = id;
+        event.id = id;  // 保存事件ID
         event.text = eventData["title"].toString();
         event.startTime = eventData["start_time"].toDateTime();
         event.endTime = eventData["end_time"].toDateTime();
@@ -1868,9 +1891,9 @@ void MainWindow::loadEventsFromDatabase()
     updateEventList();
 }
 
-void MainWindow::saveEventToDatabase(const EventItem& event)
+int MainWindow::saveEventToDatabase(const EventItem& event)
 {
-    bool success = database->addEvent(
+    int newId = database->addEvent(
         event.text,
         event.startTime,
         event.endTime,
@@ -1878,9 +1901,10 @@ void MainWindow::saveEventToDatabase(const EventItem& event)
         event.color
     );
     
-    if (!success) {
+    if (newId <= 0) {
         QMessageBox::warning(this, tr("错误"), tr("保存事件失败"));
     }
+    return newId;
 }
 
 void MainWindow::updateEventInDatabase(int eventId, const EventItem& event)

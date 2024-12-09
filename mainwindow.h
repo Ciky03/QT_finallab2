@@ -88,7 +88,7 @@ private:
     IDatabase* database;
     
     void loadEventsFromDatabase();
-    void saveEventToDatabase(const EventItem& event);
+    int saveEventToDatabase(const EventItem& event);
     void updateEventInDatabase(int eventId, const EventItem& event);
     void deleteEventFromDatabase(int eventId);
 
